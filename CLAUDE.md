@@ -1,4 +1,4 @@
-# PROJECT.md — Food Shop (Зерно истины)
+# CLAUDE.md — Food Shop (Зерно истины)
 
 > Этот файл — единственный источник правды о проекте.
 > Вставляй его в начало каждого нового чата с Claude.
@@ -18,6 +18,8 @@
 | Gunicorn        | 21.x       |                                     |
 | Nginx           | 1.24 stable|                                     |
 | Ubuntu Server   | 22.04 LTS  |                                     |
+| Docker Desktop  | latest     | Локальная разработка (PostgreSQL + Redis) |
+| Poetry          | 1.8.x      | Управление зависимостями                  |
 
 ---
 
@@ -47,11 +49,6 @@ project/
   templates/
   static/
   media/
-
-  requirements/
-    base.txt
-    dev.txt
-    prod.txt
 ```
 
 ---
@@ -159,18 +156,9 @@ class Shipment(models.Model):
 
 ---
 
-## 4. Зависимости (base.txt)
-
-```
-Django==4.2.*
-psycopg2-binary==2.9.*
-redis==5.0.*
-celery==5.3.*
-Pillow==10.*
-django-environ==0.11.*
-django-filter==23.*
-gunicorn==21.*
-```
+## 4. Зависимости
+Управление через Poetry. См. раздел 11 (pyproject.toml).
+Файл requirements/ не используется.
 
 ---
 
@@ -233,3 +221,97 @@ CELERY_BROKER_URL = env('REDIS_URL', default='redis://127.0.0.1:6379/1')
 - Секреты — только в `.env`, никогда в git
 - Для каждого app — свой `urls.py`, подключаем через `include()`
 - Все денежные значения — `DecimalField`, никогда `FloatField`
+
+## 10. Локальное окружение (Windows 10)
+
+### Инструменты
+- VS Code + расширения: Python, Pylance, Django, DotENV, GitLens
+- Windows Terminal — вместо стандартного cmd
+- Docker Desktop — только Redis локально
+- DBeaver — подключение через SSH tunnel (не открывать порт наружу)
+- WinSCP — только для аварийных случаев
+
+### Запуск зависимостей локально
+docker-compose.yml лежит в корне проекта.
+Команда для старта: docker-compose up -d
+Останавливает: docker-compose down
+
+Сервисы:
+- Redis 7 → localhost:6379
+- PostgreSQL — всегда на VPS (79.133.181.123:5432)
+
+### Параметры docker-compose (dev)
+db:
+  POSTGRES_DB:       foodshop
+  POSTGRES_USER:     задать в .env
+  POSTGRES_PASSWORD: задать в .env
+
+### Управление зависимостями — Poetry 1.8.x
+Файл зависимостей: pyproject.toml (не редактировать requirements.txt вручную)
+
+Основные команды:
+  poetry install          # установить все зависимости
+  poetry add <пакет>      # добавить prod-зависимость
+  poetry add --group dev <пакет>  # добавить dev-зависимость
+  poetry remove <пакет>   # удалить
+  poetry shell            # активировать виртуальное окружение
+  poetry update           # обновить все пакеты
+
+Группы зависимостей:
+  [tool.poetry.dependencies]       — prod (django, celery, redis, ...)
+  [tool.poetry.group.dev]          — dev  (debug-toolbar, pytest-django, ...)
+
+На VPS: poetry install --only main  # только prod, без dev
+
+
+## 11. pyproject.toml (скелет)
+
+```toml
+[tool.poetry]
+name = "foodshop"
+version = "0.1.0"
+python = "^3.11"
+
+[tool.poetry.dependencies]
+django = "^4.2"
+psycopg2-binary = "^2.9"
+redis = "^5.0"
+celery = "^5.3"
+pillow = "^10.0"
+django-environ = "^0.11"
+django-filter = "^23.0"
+gunicorn = "^21.0"
+
+[tool.poetry.group.dev.dependencies]
+django-debug-toolbar = "*"
+pytest-django = "*"
+```
+
+
+## 12. Инфраструктура
+
+### VPS
+- OS:     Ubuntu 22.04 LTS
+- Домен:  asotia.ru
+- Путь к проекту: /var/www/foodshop
+
+### Nginx
+- Config:  /etc/nginx/sites-available/foodshop
+- Logs:    /var/log/nginx/foodshop_access.log
+           /var/log/nginx/foodshop_error.log
+
+### Gunicorn
+- Socket:   /run/foodshop.sock
+- Service:  /etc/systemd/system/foodshop.service
+- Workers:  3
+
+### Пути на сервере
+- Виртуальное окружение: /var/www/foodshop/.venv
+- Статика:  /var/www/foodshop/static/
+- Медиа:    /var/www/foodshop/media/
+- Логи:     /var/www/foodshop/logs/
+
+### .env
+- Хранится локально и в облаке (Notion/Bitwarden)
+- В git не пушить никогда
+- Шаблон: .env.example — пушить в git
