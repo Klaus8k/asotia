@@ -30,3 +30,14 @@ bashdocker-compose up -d
 '''
 
 И всё — PostgreSQL и Redis работают локально, DBeaver к ним подключается как обычно. На Windows без Docker установка этих сервисов — лишняя головная боль.
+
+### Для claude
+
+MSP - подулючение к сторонним сервисам. Есть у чат гпт?
+
+https://www.youtube.com/watch?v=dn3CuC-2NiI&t=1415s
+
+- Playwright MCP - глаза Claude Code
+- MSP репозитории
+- Связка Claude и Chrome
+- агенты
