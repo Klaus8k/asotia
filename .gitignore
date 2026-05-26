@@ -15,7 +15,6 @@ media/
 staticfiles/
 
 # Env
-.env
 .venv/
 
 # IDE
@@ -25,3 +24,4 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
+.env_prod
