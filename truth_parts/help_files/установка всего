@@ -15,3 +15,8 @@ source ~/.bashrc
 pyproject.toml из зерна
 баш - poetry install
 
+### контейнеры Докер
+docker compose up -d
+docker compose ps - статус
+docker compose down -v
+
