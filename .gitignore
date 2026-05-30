@@ -16,6 +16,8 @@ staticfiles/
 
 # Env
 .venv/
+.env
+.env_prod
 
 # IDE
 .vscode/
@@ -24,4 +26,3 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
-.env_prod
