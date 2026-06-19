@@ -6,40 +6,102 @@
 {% endblock %}
 
 {% block content %}
-    <h2>{% if current_category %}{{ current_category.name }}{% else %}Каталог{% endif %}</h2>
 
-    <h3>Категории</h3>
-    <ul>
-        <li><a href="{% url 'catalog:index' %}">Все товары</a></li>
-        {% for category in categories %}
-            <li>
+<section class="catalog-page">
+
+    <div class="catalog-header">
+        <h1>
+            {% if current_category %}
+                {{ current_category.name }}
+            {% else %}
+                Каталог
+            {% endif %}
+        </h1>
+    </div>
+
+    <section class="catalog-section">
+        <div class="section-title">
+            <h2>Категории</h2>
+        </div>
+
+        <div class="categories">
+            <a href="{% url 'catalog:index' %}">
+                Все товары
+            </a>
+
+            {% for category in categories %}
                 <a href="{% url 'catalog:category' category.slug %}">
-                    {% if category.parent %}{{ category.parent.name }} → {% endif %}
+                    {% if category.parent %}
+                        {{ category.parent.name }} →
+                    {% endif %}
                     {{ category.name }}
                 </a>
-            </li>
-        {% empty %}
-            <li>Категорий пока нет.</li>
-        {% endfor %}
-    </ul>
+            {% empty %}
+                <p>Категорий пока нет.</p>
+            {% endfor %}
+        </div>
+    </section>
 
-    <h3>Товары</h3>
-    {% for product in products %}
-        <article>
-            <h4>
-                <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">
-                    {{ product.name }}
-                </a>
-            </h4>
-            {% if product.image %}
-                <img src="{{ product.image.url }}" alt="{{ product.name }}" width="200">
-            {% endif %}
-            <p>Категория: {{ product.category.name }}</p>
-            <p>Цена: {{ product.price }} ₽</p>
-            <p>Наличие: {{ product.get_stock_status_display }}</p>
-        </article>
-        <hr>
-    {% empty %}
-        <p>Товаров пока нет.</p>
-    {% endfor %}
+    <section class="catalog-section">
+        <div class="section-title">
+            <h2>Товары</h2>
+        </div>
+
+        {% if products %}
+            <div class="products">
+
+                {% for product in products %}
+                    <article class="product-card">
+
+                        <a
+                            href="{% url 'catalog:product_detail' product.category.slug product.slug %}"
+                            class="product-image"
+                        >
+                            {% if product.image %}
+                                <img
+                                    src="{{ product.image.url }}"
+                                    alt="{{ product.name }}"
+                                >
+                            {% else %}
+                                <span>🥫</span>
+                            {% endif %}
+                        </a>
+
+                        <div class="product-info">
+                            <h3>
+                                <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">
+                                    {{ product.name }}
+                                </a>
+                            </h3>
+
+                            <p class="product-category">
+                                {{ product.category.name }}
+                            </p>
+
+                            <p class="product-stock">
+                                {{ product.get_stock_status_display }}
+                            </p>
+
+                            <div class="product-bottom">
+                                <strong>{{ product.price }} ₽</strong>
+
+                                <button type="button" aria-label="Добавить в корзину">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+
+                    </article>
+                {% endfor %}
+
+            </div>
+        {% else %}
+            <p class="empty-message">
+                Товаров пока нет.
+            </p>
+        {% endif %}
+    </section>
+
+</section>
+
 {% endblock %}

@@ -1,9 +1,89 @@
 {% extends "base.html" %}
 
-{% block title %}Главная — Asoti Food Shop{% endblock %}
+{% block title %}
+Главная | Asotia Food Shop
+{% endblock %}
 
 {% block content %}
-    <h2>Главная</h2>
-    <p>Интернет-магазин продуктов Asoti.</p>
-    <p><a href="{% url 'catalog:index' %}">Перейти в каталог</a></p>
+
+<section class="hero">
+
+    <h1>
+        Натуральные продукты для вашего стола
+    </h1>
+
+    <p>
+        Консервы, заморозка и готовые блюда.
+    </p>
+
+    <a href="{% url 'catalog:index' %}">
+        Перейти в каталог
+    </a>
+
+</section>
+
+<section>
+
+    <h2>Категории</h2>
+
+    <div class="categories">
+
+        <a href="{% url 'catalog:index' %}">
+            🥫 Консервы
+        </a>
+
+        <a href="{% url 'catalog:index' %}">
+            ❄️ Заморозка
+        </a>
+
+        <a href="{% url 'catalog:index' %}">
+            🍲 Готовые блюда
+        </a>
+
+        <a href="{% url 'catalog:index' %}">
+            🐟 Рыба
+        </a>
+
+        <a href="{% url 'catalog:index' %}">
+            🥩 Мясо
+        </a>
+
+    </div>
+
+</section>
+
+<section>
+
+    <h2>Популярные товары</h2>
+
+    <div class="products">
+
+        <article>
+            <div>🥫</div>
+            <h3>Тушенка говяжья</h3>
+            <strong>325 ₽</strong>
+        </article>
+
+        <article>
+            <div>🥫</div>
+            <h3>Паштет куриный</h3>
+            <strong>145 ₽</strong>
+        </article>
+
+        <article>
+            <div>🐟</div>
+            <h3>Скумбрия натуральная</h3>
+            <strong>210 ₽</strong>
+        </article>
+
+        <article>
+            <div>🍲</div>
+            <h3>Каша с говядиной</h3>
+            <strong>195 ₽</strong>
+        </article>
+
+    </div>
+
+</section>
+
 {% endblock %}
