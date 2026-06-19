@@ -3,30 +3,41 @@
 {% block title %}{{ product.name }} — Asoti Food Shop{% endblock %}
 
 {% block content %}
-    <p>
-        <a href="{% url 'catalog:index' %}">Каталог</a>
-        →
-        <a href="{% url 'catalog:category' product.category.slug %}">
-            {{ product.category.name }}
-        </a>
-    </p>
+    <article class="product-detail">
+        <nav class="breadcrumbs" aria-label="Хлебные крошки">
+            <a href="{% url 'catalog:index' %}">Каталог</a>
+            <span>→</span>
+            <a href="{% url 'catalog:category' product.category.slug %}">
+                {{ product.category.name }}
+            </a>
+        </nav>
 
-    <h2>{{ product.name }}</h2>
+        <div class="product-detail-layout">
+            <div class="product-detail-image">
+                {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                {% else %}
+                    <span aria-hidden="true">🥫</span>
+                {% endif %}
+            </div>
 
-    {% if product.image %}
-        <img src="{{ product.image.url }}" alt="{{ product.name }}" width="400">
-    {% endif %}
+            <div class="product-detail-info">
+                <h1>{{ product.name }}</h1>
+                <p class="product-detail-price">{{ product.price }} ₽</p>
+                <p>Наличие: {{ product.get_stock_status_display }}</p>
+                <p>Остаток: {{ product.stock_quantity }}</p>
 
-    <p>Цена: {{ product.price }} ₽</p>
-    <p>Наличие: {{ product.get_stock_status_display }}</p>
-    <p>Остаток: {{ product.stock_quantity }}</p>
+                {% if product.weight_grams %}
+                    <p>Вес: {{ product.weight_grams }} г</p>
+                {% endif %}
 
-    {% if product.weight_grams %}
-        <p>Вес: {{ product.weight_grams }} г</p>
-    {% endif %}
-
-    {% if product.description %}
-        <h3>Описание</h3>
-        {{ product.description|linebreaks }}
-    {% endif %}
+                {% if product.description %}
+                    <section class="product-description">
+                        <h2>Описание</h2>
+                        {{ product.description|linebreaks }}
+                    </section>
+                {% endif %}
+            </div>
+        </div>
+    </article>
 {% endblock %}
