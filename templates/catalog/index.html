@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if current_category %}{{ current_category.name }}{% else %}Каталог{% endif %}
+    — Asoti Food Shop
+{% endblock %}
+
+{% block content %}
+    <h2>{% if current_category %}{{ current_category.name }}{% else %}Каталог{% endif %}</h2>
+
+    <h3>Категории</h3>
+    <ul>
+        <li><a href="{% url 'catalog:index' %}">Все товары</a></li>
+        {% for category in categories %}
+            <li>
+                <a href="{% url 'catalog:category' category.slug %}">
+                    {% if category.parent %}{{ category.parent.name }} → {% endif %}
+                    {{ category.name }}
+                </a>
+            </li>
+        {% empty %}
+            <li>Категорий пока нет.</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Товары</h3>
+    {% for product in products %}
+        <article>
+            <h4>
+                <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">
+                    {{ product.name }}
+                </a>
+            </h4>
+            {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" width="200">
+            {% endif %}
+            <p>Категория: {{ product.category.name }}</p>
+            <p>Цена: {{ product.price }} ₽</p>
+            <p>Наличие: {{ product.get_stock_status_display }}</p>
+        </article>
+        <hr>
+    {% empty %}
+        <p>Товаров пока нет.</p>
+    {% endfor %}
+{% endblock %}

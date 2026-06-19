@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} — Asoti Food Shop{% endblock %}
+
+{% block content %}
+    <p>
+        <a href="{% url 'catalog:index' %}">Каталог</a>
+        →
+        <a href="{% url 'catalog:category' product.category.slug %}">
+            {{ product.category.name }}
+        </a>
+    </p>
+
+    <h2>{{ product.name }}</h2>
+
+    {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}" width="400">
+    {% endif %}
+
+    <p>Цена: {{ product.price }} ₽</p>
+    <p>Наличие: {{ product.get_stock_status_display }}</p>
+    <p>Остаток: {{ product.stock_quantity }}</p>
+
+    {% if product.weight_grams %}
+        <p>Вес: {{ product.weight_grams }} г</p>
+    {% endif %}
+
+    {% if product.description %}
+        <h3>Описание</h3>
+        {{ product.description|linebreaks }}
+    {% endif %}
+{% endblock %}

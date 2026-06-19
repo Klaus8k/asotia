@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from django.core.management import call_command
 from django.test import TestCase
+from django.urls import reverse
 
 from .models import Category, Product
 
@@ -90,6 +91,101 @@ class ProductModelTests(TestCase):
         product.stock_quantity = 0
         product.sync_stock_status()
         self.assertEqual(product.stock_status, Product.StockStatus.OUT_OF_STOCK)
+
+
+class CatalogViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.category = Category.objects.create(
+            name="Тушёнка",
+            slug="tushenka",
+        )
+        cls.product = Product.objects.create(
+            category=cls.category,
+            name="Тушёнка говяжья",
+            slug="tushenka-govyazhya",
+            description="Тушёнка из говядины.",
+            price=Decimal("399.90"),
+        )
+
+    def test_catalog_uses_template_and_lists_product(self):
+        response = self.client.get(reverse("catalog:index"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "catalog/index.html")
+        self.assertContains(response, self.product.name)
+
+    def test_category_page_filters_products(self):
+        other_category = Category.objects.create(
+            name="Рыба",
+            slug="fish",
+        )
+        Product.objects.create(
+            category=other_category,
+            name="Скумбрия",
+            slug="skumbriya",
+            description="",
+            price=Decimal("200.00"),
+        )
+
+        response = self.client.get(
+            reverse("catalog:category", args=[self.category.slug])
+        )
+
+        self.assertContains(response, self.product.name)
+        self.assertNotContains(response, "Скумбрия")
+
+    def test_product_detail_uses_category_and_product_slugs(self):
+        response = self.client.get(
+            reverse(
+                "catalog:product_detail",
+                args=[self.category.slug, self.product.slug],
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "catalog/product_detail.html")
+        self.assertContains(response, self.product.name)
+
+    def test_unicode_slugs_are_supported(self):
+        category = Category.objects.create(
+            name="Консервы",
+            slug="консервы",
+        )
+        product = Product.objects.create(
+            category=category,
+            name="Говядина",
+            slug="говядина",
+            description="",
+            price=Decimal("480.00"),
+        )
+
+        category_response = self.client.get(
+            reverse("catalog:category", args=[category.slug])
+        )
+        product_response = self.client.get(
+            reverse(
+                "catalog:product_detail",
+                args=[category.slug, product.slug],
+            )
+        )
+
+        self.assertEqual(category_response.status_code, 200)
+        self.assertContains(category_response, product.name)
+        self.assertEqual(product_response.status_code, 200)
+
+    def test_inactive_product_is_not_public(self):
+        self.product.is_active = False
+        self.product.save(update_fields=("is_active",))
+
+        response = self.client.get(
+            reverse(
+                "catalog:product_detail",
+                args=[self.category.slug, self.product.slug],
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
 
 
 class LegacyCatalogImportTests(TestCase):

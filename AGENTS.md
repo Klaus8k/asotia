@@ -24,13 +24,17 @@ SPA-фронтенд и отдельная админ-панель в текущ
 
 - Django-проект и приложения созданы;
 - dev/prod-настройки разделены;
-- базовые URL и временные `HttpResponse` работают;
+- базовые URL работают; корзина и checkout пока возвращают временные
+  `HttpResponse`;
 - в `apps/catalog` реализованы базовые модели категорий и товаров и их тесты;
 - для `apps/catalog` создана начальная миграция; остальные приложения пока без
   бизнес-моделей и миграций;
+- созданы минимальные Django-шаблоны для общей навигации, главной страницы,
+  каталога, фильтрации по категории и карточки товара;
 - каталог можно однократно наполнить из старых таблиц `categories` и `products`
   командой `poetry run python manage.py import_legacy_catalog`;
-- шаблоны и полноценные пользовательские сценарии ещё не реализованы.
+- корзина, checkout и полноценное наполнение информационных страниц ещё не
+  реализованы.
 
 Не принимайте примеры и планы из `truth_parts/` за реализованный код. Источник
 правды о текущем поведении — код, настройки, миграции и тесты репозитория.
@@ -132,6 +136,8 @@ docker compose down
 /privacy/                 pages:privacy
 /terms/                   pages:terms
 /catalog/                 catalog:index
+/catalog/category/<category_slug>/  catalog:category
+/catalog/<category_slug>/<product_slug>/  catalog:product_detail
 /cart/                    cart:detail
 /orders/checkout/         orders:checkout
 /admin/
