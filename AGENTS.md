@@ -28,6 +28,8 @@ SPA-фронтенд и отдельная админ-панель в текущ
 - в `apps/catalog` реализованы базовые модели категорий и товаров и их тесты;
 - для `apps/catalog` создана начальная миграция; остальные приложения пока без
   бизнес-моделей и миграций;
+- каталог можно однократно наполнить из старых таблиц `categories` и `products`
+  командой `poetry run python manage.py import_legacy_catalog`;
 - шаблоны и полноценные пользовательские сценарии ещё не реализованы.
 
 Не принимайте примеры и планы из `truth_parts/` за реализованный код. Источник
@@ -199,6 +201,17 @@ poetry run pytest
 ```powershell
 poetry run python manage.py makemigrations --check --dry-run
 ```
+
+Импорт старого каталога выполняется после миграций в базе, где одновременно
+доступны старые таблицы `categories`/`products` и новые Django-таблицы:
+
+```powershell
+poetry run python manage.py import_legacy_catalog --dry-run
+poetry run python manage.py import_legacy_catalog
+```
+
+Команда переносит остатки, преобразует цены в `Decimal`, скачивает изображения
+Cloud Mail в `media/products/` и может запускаться повторно без дублей.
 
 Перед production-изменениями:
 

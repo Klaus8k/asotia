@@ -84,6 +84,7 @@ class Product(models.Model):
         upload_to="products/",
         blank=True,
     )
+    stock_quantity = models.PositiveIntegerField("остаток", default=0)
     storage_type = models.CharField(
         "тип хранения",
         max_length=10,
@@ -127,3 +128,9 @@ class Product(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def sync_stock_status(self) -> None:
+        if self.stock_quantity > 0:
+            self.stock_status = self.StockStatus.IN_STOCK
+        else:
+            self.stock_status = self.StockStatus.OUT_OF_STOCK
