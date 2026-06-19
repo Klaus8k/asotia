@@ -6,6 +6,8 @@ APP_DIR="${APP_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)}"
 BRANCH="${BRANCH:-main}"
 SERVICE_NAME="${SERVICE_NAME:-asotia}"
 HEALTHCHECK_URL="${HEALTHCHECK_URL:-}"
+EXPECTED_DATABASE_HOST="${EXPECTED_DATABASE_HOST:-127.0.0.1}"
+EXPECTED_DATABASE_PORT="${EXPECTED_DATABASE_PORT:-15432}"
 
 log() {
     printf '[deploy] %s\n' "$1"
@@ -55,6 +57,27 @@ log "Устанавливаю production-зависимости."
 poetry install --only main --no-root --no-interaction --no-ansi
 
 export DJANGO_SETTINGS_MODULE="config.settings.prod"
+
+DATABASE_ENDPOINT="$(
+    poetry run python -c '
+import django
+
+django.setup()
+
+from django.conf import settings
+
+database = settings.DATABASES["default"]
+print(
+    "{}:{}".format(
+        database.get("HOST") or "localhost",
+        database.get("PORT") or 5432,
+    )
+)
+'
+)"
+EXPECTED_DATABASE_ENDPOINT="${EXPECTED_DATABASE_HOST}:${EXPECTED_DATABASE_PORT}"
+[[ "${DATABASE_ENDPOINT}" == "${EXPECTED_DATABASE_ENDPOINT}" ]] || fail \
+    "DATABASE_URL указывает ${DATABASE_ENDPOINT}, ожидался ${EXPECTED_DATABASE_ENDPOINT}."
 
 log "Проверяю production-конфигурацию Django."
 poetry run python manage.py check --deploy

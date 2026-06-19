@@ -95,10 +95,8 @@ poetry run python manage.py runserver
 - PostgreSQL с хоста: `127.0.0.1:5433`;
 - Redis с хоста: `127.0.0.1:6379`.
 
-`docker-compose.yml` пробрасывает PostgreSQL как `5433:5432`.
-`.env.example` уже использует порт `5433`. Встроенный fallback в
-`config/settings/dev.py` всё ещё указывает `5432`, поэтому для обычного запуска
-нужен `.env`.
+`docker-compose.yml` пробрасывает локальный PostgreSQL как `5433:5432`.
+`.env.example` и fallback в `config/settings/dev.py` используют порт `5433`.
 
 Остановка сервисов:
 
@@ -115,6 +113,9 @@ docker compose down
 - Production использует `config.settings.prod`.
 - Настройки читаются из корневого `.env` через `django-environ`.
 - `.env` и `.env_prod` не коммитятся.
+- `.env.example` предназначен для локальной разработки.
+- `.env.prod.example` задаёт безопасный шаблон production-настроек без реальных
+  секретов; на сервере его значения переносятся в закрытый файл `.env`.
 - При добавлении обязательной переменной обновляйте `.env.example` безопасным
   примером без реального секрета.
 - Не выводите и не копируйте значения секретов из локальных env-файлов.
@@ -245,6 +246,40 @@ SERVICE_NAME=asotia \
 HEALTHCHECK_URL=https://asotia.ru/ \
 ./deploy.sh
 ```
+
+### PostgreSQL на production-сервере
+
+На текущем сервере уже работают системные кластеры PostgreSQL, которые нельзя
+останавливать, обновлять или переиспользовать для Asoti Food Shop:
+
+- `127.0.0.1:5432` — PostgreSQL 12 с действующими базами старых проектов,
+  включая `tipkor.ru` и старую базу-источник `asoti`;
+- `127.0.0.1:5433` — отдельный системный PostgreSQL 14.
+
+Новый магазин использует только отдельный PostgreSQL 15 из
+`docker-compose.prod.yml`:
+
+- контейнер: `asotia_postgres15`;
+- адрес с хоста: `127.0.0.1:15432`;
+- постоянный Docker volume: `asotia_postgres15_data`;
+- production `DATABASE_URL` должен явно указывать порт `15432`.
+
+Пример первоначального запуска:
+
+```bash
+cp .env.prod.example .env
+# Заменить SECRET_KEY и пароли в .env.
+docker compose --env-file .env -f docker-compose.prod.yml up -d
+docker compose --env-file .env -f docker-compose.prod.yml ps
+```
+
+Production-настройки не имеют fallback для `DATABASE_URL`. Это намеренный
+предохранитель от случайного подключения Django к PostgreSQL 12 на порту
+`5432`. `deploy.sh` дополнительно останавливает деплой, если Django настроен не
+на `127.0.0.1:15432`. При обоснованном изменении топологии ожидаемые host/port
+можно явно передать через `EXPECTED_DATABASE_HOST` и
+`EXPECTED_DATABASE_PORT`. Не используйте `docker compose down -v`: эта команда
+удалит новый production volume с данными магазина.
 
 ## Правила изменений
 

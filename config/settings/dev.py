@@ -12,7 +12,7 @@ ALLOWED_HOSTS = [
 DATABASES = {
     "default": env.db(
         "DATABASE_URL",
-        default="postgres://foodshop:foodshop@127.0.0.1:5432/foodshop",
+        default="postgres://foodshop:foodshop@127.0.0.1:5433/foodshop",
     )
 }
 
