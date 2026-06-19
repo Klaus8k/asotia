@@ -210,6 +210,29 @@ poetry run python manage.py check --deploy
 Для production-проверки потребуются корректные env-переменные. Не ослабляйте
 production security settings ради прохождения локальной команды.
 
+## Деплой
+
+В корне проекта находится `deploy.sh` для ручного деплоя на Linux-сервер с
+Git, Poetry и systemd. По умолчанию скрипт обновляет ветку `main` и
+перезапускает сервис `asotia`.
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+Скрипт требует production-файл `.env` в корне проекта, не допускает локальные
+изменения отслеживаемых файлов и обновляет код только через fast-forward.
+Параметры можно переопределить без изменения файла:
+
+```bash
+APP_DIR=/var/www/asotia \
+BRANCH=main \
+SERVICE_NAME=asotia \
+HEALTHCHECK_URL=https://asotia.ru/ \
+./deploy.sh
+```
+
 ## Правила изменений
 
 - Сначала изучите затронутые файлы, настройки, URL и тесты.
