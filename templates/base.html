@@ -11,105 +11,76 @@
     <link rel="stylesheet" href="{% static 'css/site.css' %}">
 </head>
 <body>
-
 <header class="site-header">
-
     <div class="header-container">
+        <a href="{% url 'pages:home' %}" class="logo">Asotia</a>
 
-        <a href="{% url 'pages:home' %}" class="logo">
-            Asotia
-        </a>
-
-        <form class="search-form"
-              action="{% url 'catalog:index' %}"
-              method="get">
-
+        <form
+            class="search-form"
+            action="{% url 'catalog:index' %}"
+            method="get"
+            role="search"
+        >
+            <label class="visually-hidden" for="site-search">
+                Поиск товаров
+            </label>
             <input
+                id="site-search"
                 type="search"
                 name="q"
                 placeholder="Найти товар..."
+                value="{{ request.GET.q|default:'' }}"
             >
-
         </form>
 
-        <a href="{% url 'cart:detail' %}"
-           class="cart-button">
-
-            🛒 Корзина
-
-            <span class="cart-count">
-                0
-            </span>
-
+        <a href="{% url 'cart:detail' %}" class="cart-button">
+            <span class="cart-icon" aria-hidden="true">🛒</span>
+            <span class="cart-label">Корзина</span>
+            <span class="cart-count">0</span>
         </a>
-
     </div>
-
 </header>
 
 <main class="page-content">
-
     {% block content %}
     {% endblock %}
-
 </main>
 
 <footer class="site-footer">
-
     <div class="footer-container">
-
-        <a href="{% url 'pages:about' %}">
-            О нас
-        </a>
-
-        <a href="{% url 'pages:contacts' %}">
-            Контакты
-        </a>
-
-        <a href="{% url 'pages:delivery' %}">
-            Доставка и оплата
-        </a>
-
-        <a href="{% url 'pages:privacy' %}">
-            Политика
-        </a>
-
-        <a href="{% url 'pages:terms' %}">
-            Соглашение
-        </a>
-
+        <a href="{% url 'pages:about' %}">О нас</a>
+        <a href="{% url 'pages:contacts' %}">Контакты</a>
+        <a href="{% url 'pages:delivery' %}">Доставка и оплата</a>
+        <a href="{% url 'pages:privacy' %}">Политика</a>
+        <a href="{% url 'pages:terms' %}">Соглашение</a>
     </div>
-
 </footer>
 
-<nav class="mobile-bottom-nav">
-
-    <a href="{% url 'pages:home' %}">
+<nav class="mobile-bottom-nav" aria-label="Основная мобильная навигация">
+    <a href="{% url 'pages:home' %}" class="mobile-nav-item">
         <span>🏠</span>
         <small>Главная</small>
     </a>
 
-    <a href="{% url 'catalog:index' %}">
+    <a href="{% url 'catalog:index' %}" class="mobile-nav-item">
         <span>📂</span>
         <small>Каталог</small>
     </a>
 
-    <a href="{% url 'cart:detail' %}">
+    <a href="{% url 'cart:detail' %}" class="mobile-nav-item">
         <span>🛒</span>
         <small>Корзина</small>
     </a>
 
-    <a href="{% url 'orders:checkout' %}">
+    <a href="{% url 'orders:checkout' %}" class="mobile-nav-item">
         <span>📦</span>
         <small>Заказ</small>
     </a>
 
-    <a href="#">
+    <span class="mobile-nav-item mobile-nav-item-disabled" aria-disabled="true">
         <span>👤</span>
         <small>Профиль</small>
-    </a>
-
+    </span>
 </nav>
-
 </body>
 </html>
