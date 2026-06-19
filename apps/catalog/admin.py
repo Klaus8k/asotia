@@ -17,6 +17,7 @@ class ProductAdmin(admin.ModelAdmin):
         "name",
         "category",
         "price",
+        "stock_quantity",
         "stock_status",
         "is_active",
         "is_featured",
