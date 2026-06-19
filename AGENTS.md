@@ -1,1091 +1,234 @@
-# AGENTS.md — Asoti Food Shop (Зерно истины)
+# AGENTS.md — Asoti Food Shop
 
-> Этот файл — единый источник правды по проекту интернет-магазина Asoti.
-> ИИ-агенты должны прочитать и учитывать этот файл перед работой с проектом.
-> Если решение изменилось — сначала обновляем этот файл, потом пишем код.
+Этот файл задаёт рабочие правила для ИИ-агентов и разработчиков в репозитории.
+Он должен описывать фактическое состояние проекта. Если архитектура, команды или
+соглашения меняются, обновляйте этот файл вместе с кодом.
 
----
+## О проекте
 
-## 0. Назначение проекта
+Asoti Food Shop — серверный интернет-магазин на Django для домена `asotia.ru`.
+Текущая цель — простой MVP:
 
-Проект: интернет-магазин продуктов / товаров Asoti.
+- каталог и карточки товаров;
+- корзина в Django session;
+- оформление заказа без обязательной регистрации;
+- обработка товаров и заказов через Django admin;
+- информационные страницы.
 
-Главная цель первого запуска — простой рабочий сайт, где пользователь может:
+Онлайн-оплата, API служб доставки, Celery, сложная программа лояльности,
+SPA-фронтенд и отдельная админ-панель в текущий MVP не входят.
 
-1. Посмотреть категории и товары.
-2. Открыть карточку товара.
-3. Добавить товар в корзину.
-4. Оформить заказ без обязательной регистрации.
-5. Передать заказ администратору для ручной обработки.
+## Фактическое состояние
 
-Проект должен быть простым, расширяемым и пригодным для повторного использования как шаблон для других магазинов.
+Проект находится на стадии каркаса:
 
----
+- Django-проект и приложения созданы;
+- dev/prod-настройки разделены;
+- базовые URL и временные `HttpResponse` работают;
+- бизнес-модели, шаблоны и полноценные тесты ещё не реализованы;
+- миграций проекта, кроме пустых `__init__.py`, пока нет.
 
-## 1. Домены и окружения
+Не принимайте примеры и планы из `truth_parts/` за реализованный код. Источник
+правды о текущем поведении — код, настройки, миграции и тесты репозитория.
 
-### Production-домен
+## Стек
 
-- Основной домен: `asotia.ru`
-- Дополнительный домен: `www.asotia.ru`
-- Основной вариант сайта: `asotia.ru`
-- Редирект: `www.asotia.ru` → `asotia.ru`
+- Python `^3.12`
+- Django `^5.2`
+- PostgreSQL 15
+- Redis 7 — контейнер подготовлен, но приложение пока его не использует
+- Poetry
+- pytest + pytest-django
+- Ruff
+- Gunicorn для production
 
-### Окружения
+Точные ограничения зависимостей находятся в `pyproject.toml` и `poetry.lock`.
+Не обновляйте зависимости без необходимости и не редактируйте `poetry.lock`
+вручную.
 
-| Окружение | Назначение | Где находится |
-|----------|------------|---------------|
-| local/dev | локальная разработка | Windows 10 + VS Code + Docker |
-| production | рабочий сайт | VPS + Nginx + Gunicorn |
-
----
-
-## 2. Стек и версии
-
-| Компонент | Версия / решение | Примечание |
-|----------|------------------|------------|
-| Python | 3.12.x | стабильная версия для нового проекта |
-| Django | 5.2.x LTS | LTS-ветка |
-| PostgreSQL | 15.x | стабильная версия, достаточно для проекта |
-| Redis | 7.x | этап 2: кэш, сессии, Celery; на MVP можно без него |
-| Celery | 5.x | этап 2, не в MVP |
-| Gunicorn | актуальная стабильная | production WSGI-сервер |
-| Nginx | из репозитория Ubuntu | reverse proxy + static/media |
-| Ubuntu Server | 22.04 LTS | текущая целевая ОС VPS |
-| Docker Desktop | latest | локальная разработка PostgreSQL + Redis |
-| Poetry | 1.8.x | управление зависимостями |
-
----
-
-## 3. Принцип разработки
-
-Главный принцип: сначала простой рабочий MVP, потом расширение.
-
-Не добавлять сложные интеграции раньше времени:
-
-- онлайн-оплата — этап 2;
-- СДЭК / доставка API — этап 2;
-- Celery — этап 2;
-- бонусы и скидочные уровни — после базового заказа;
-- сложные фильтры — после наполнения каталога;
-- отдельная админ-панель — после проверки потребности.
-
-Первый релиз должен быть понятным, запускаемым и управляемым через Django admin.
-
----
-
-## 4. MVP первого запуска
-
-В первый релиз входят:
-
-1. Главная страница.
-2. Категории товаров.
-3. Список товаров.
-4. Карточка товара.
-5. Корзина.
-6. Оформление заказа без обязательной регистрации.
-7. Админка товаров.
-8. Админка категорий.
-9. Админка заказов.
-10. Уведомление администратору о новом заказе.
-11. Страница “Контакты”.
-12. Страница “О нас”.
-13. Страница “Доставка и оплата”.
-14. Политика конфиденциальности.
-15. Пользовательское соглашение / условия заказа.
-
-Не входит в первый релиз:
-
-1. Онлайн-оплата.
-2. Интеграция с доставкой.
-3. Личный кабинет со сложной историей заказов.
-4. Бонусная программа.
-5. Celery-задачи.
-6. Сложная аналитика.
-7. Многоуровневые промокоды.
-8. Интеграция с 1С.
-9. React/Vue frontend.
-
----
-
-## 5. Структура проекта
+## Структура
 
 ```text
-asoti-foodshop/
-  config/
-    settings/
-      base.py
-      dev.py
-      prod.py
-    urls.py
-    wsgi.py
-    asgi.py
-
-  apps/
-    accounts/      # пользователи, профиль, позже скидочная программа
-    catalog/       # товары, категории, теги
-    cart/          # корзина через Django sessions
-    orders/        # заказы, статусы, позиции заказа
-    pages/         # статичные страницы
-    core/          # базовые утилиты, миксины, helpers
-
-    payments/      # этап 2: онлайн-оплата
-    delivery/      # этап 2: доставка/API
-
-  templates/
-  static/
-  media/
-  locale/
-
-  .env.example
-  docker-compose.yml
-  pyproject.toml
-  manage.py
+apps/
+  accounts/   пользователи и профиль; URL приложения пока не подключены
+  catalog/    категории и товары
+  cart/       session-based корзина
+  orders/     оформление и хранение заказов
+  pages/      главная и информационные страницы
+  core/       только действительно общие компоненты
+config/
+  settings/
+    base.py
+    dev.py
+    prod.py
+  urls.py
+templates/    общие шаблоны
+static/       исходные статические файлы
+media/        пользовательские загрузки; не коммитятся
+locale/       переводы
 ```
 
----
+Каждое Django-приложение владеет своей предметной областью. Не складывайте
+бизнес-логику в `core` только ради «общности».
 
-## 6. Приложения проекта
+## Локальный запуск
 
-### accounts
+Все команды выполняются из корня репозитория — каталога с `manage.py`.
 
-Назначение:
-
-- регистрация и авторизация пользователей;
-- профиль пользователя;
-- телефон и адрес;
-- позже: скидочная карта и бонусы.
-
-В MVP регистрация не обязательна. Заказ можно оформить как гость.
-
-### catalog
-
-Назначение:
-
-- категории;
-- товары;
-- теги;
-- цены;
-- наличие;
-- изображения товаров.
-
-Модель товара пока оставляем простой. Расширения по товару добавлять позже, когда станет понятна реальная структура каталога.
-
-### cart
-
-Назначение:
-
-- добавление товара в корзину;
-- изменение количества;
-- удаление товара;
-- пересчёт суммы.
-
-Для MVP корзина хранится в Django sessions. Redis можно подключить позже.
-
-### orders
-
-Назначение:
-
-- создание заказа;
-- хранение состава заказа;
-- хранение данных покупателя на момент оформления;
-- статусы заказа;
-- просмотр и обработка заказа в админке.
-
-### pages
-
-Назначение:
-
-- “О нас”;
-- “Контакты”;
-- “Доставка и оплата”;
-- “Политика конфиденциальности”;
-- “Пользовательское соглашение”.
-
-### payments
-
-Назначение:
-
-- онлайн-оплата;
-- хранение статуса платежа;
-- интеграции с ЮКассой / Тинькофф.
-
-Статус: этап 2, не MVP.
-
-### delivery
-
-Назначение:
-
-- зоны доставки;
-- стоимость доставки;
-- интеграции со службами доставки.
-
-Статус: этап 2, не MVP.
-
----
-
-## 7. URL-структура
-
-Рекомендуемая структура:
-
-```text
-/                          # главная
-/catalog/                  # каталог
-/catalog/<category-slug>/   # категория
-/product/<product-slug>/    # товар
-
-/cart/                     # корзина
-/cart/add/<product-id>/     # добавить товар
-/cart/update/               # обновить количество
-/cart/remove/<product-id>/  # удалить товар
-
-/checkout/                 # оформление заказа
-/order/success/<order-id>/  # успешное оформление
-
-/about/                    # о нас
-/contacts/                 # контакты
-/delivery/                 # доставка и оплата
-/privacy/                  # политика конфиденциальности
-/terms/                    # условия использования
-```
-
-Для каждого app — свой `urls.py`, подключение через `include()`.
-
----
-
-## 8. Модели БД
-
-### accounts/models.py
-
-```python
-from django.contrib.auth.models import User
-from django.db import models
-
-
-class UserProfile(models.Model):
-    user = models.OneToOneField(
-        User,
-        on_delete=models.CASCADE,
-        related_name="profile",
-    )
-    phone = models.CharField(max_length=32, blank=True)
-    address = models.TextField(blank=True)
-
-    # Для будущей скидочной программы
-    discount_pct = models.PositiveSmallIntegerField(default=0)
-    bonus_points = models.PositiveIntegerField(default=0)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Profile: {self.user}"
-```
-
-Скидочную карту можно добавить позже, когда появится реальная логика программы лояльности.
-
----
-
-### catalog/models.py
-
-```python
-from django.db import models
-
-
-class Category(models.Model):
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, unique=True)
-    parent = models.ForeignKey(
-        "self",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="children",
-    )
-    is_active = models.BooleanField(default=True)
-    sort_order = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        ordering = ["sort_order", "name"]
-        verbose_name = "Category"
-        verbose_name_plural = "Categories"
-
-    def __str__(self):
-        return self.name
-
-
-class Tag(models.Model):
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, unique=True)
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-
-class Product(models.Model):
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, unique=True)
-    category = models.ForeignKey(
-        Category,
-        on_delete=models.PROTECT,
-        related_name="products",
-    )
-    tags = models.ManyToManyField(Tag, blank=True, related_name="products")
-
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    weight = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        help_text="Вес в граммах",
-    )
-
-    description = models.TextField(blank=True)
-    image = models.ImageField(upload_to="products/", blank=True)
-
-    is_active = models.BooleanField(default=True)
-    in_stock = models.BooleanField(default=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-```
-
-Примечание:
-
-- модель товара пока специально не усложняем;
-- позже можно добавить артикулы, остатки, старую цену, несколько изображений, SEO-поля, единицы измерения и характеристики.
-
----
-
-### cart
-
-На MVP корзину храним в Django session.
-
-Пример структуры:
-
-```python
-{
-    "product_id": {
-        "qty": 2,
-        "price": "350.00"
-    }
-}
-```
-
-Возможный ключ в session:
-
-```python
-request.session["cart"]
-```
-
-Redis для корзины можно добавить позже, если появится необходимость.
-
----
-
-### orders/models.py
-
-```python
-from django.conf import settings
-from django.db import models
-
-from apps.catalog.models import Product
-
-
-class Order(models.Model):
-    class Status(models.TextChoices):
-        NEW = "new", "Новый"
-        CONFIRMED = "confirmed", "Подтверждён"
-        ASSEMBLING = "assembling", "Собирается"
-        READY = "ready", "Готов"
-        DELIVERING = "delivering", "Доставляется"
-        COMPLETED = "completed", "Завершён"
-        CANCELLED = "cancelled", "Отменён"
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="orders",
-    )
-
-    status = models.CharField(
-        max_length=32,
-        choices=Status.choices,
-        default=Status.NEW,
-    )
-
-    # Данные покупателя на момент оформления заказа
-    customer_name = models.CharField(max_length=255)
-    customer_phone = models.CharField(max_length=32)
-    customer_email = models.EmailField(blank=True)
-
-    # Доставка / самовывоз
-    address = models.TextField(blank=True)
-    delivery_method = models.CharField(max_length=64, blank=True)
-    delivery_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-    )
-
-    # Оплата
-    payment_method = models.CharField(max_length=64, blank=True)
-
-    # Деньги
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    final_price = models.DecimalField(max_digits=10, decimal_places=2)
-
-    comment = models.TextField(blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"Order #{self.pk}"
-
-
-class OrderItem(models.Model):
-    order = models.ForeignKey(
-        Order,
-        on_delete=models.CASCADE,
-        related_name="items",
-    )
-    product = models.ForeignKey(
-        Product,
-        on_delete=models.PROTECT,
-        related_name="order_items",
-    )
-    qty = models.PositiveSmallIntegerField()
-
-    # Цена товара на момент заказа
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-
-    def __str__(self):
-        return f"{self.product} × {self.qty}"
-```
-
----
-
-### payments/models.py
-
-Этап 2. В MVP можно не создавать.
-
-### delivery/models.py
-
-Этап 2. В MVP можно не создавать.
-
----
-
-## 9. Настройки Django
-
-### config/settings/base.py
-
-```python
-from pathlib import Path
-
-import environ
-
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
-env = environ.Env(
-    DEBUG=(bool, False),
-)
-
-environ.Env.read_env(BASE_DIR / ".env")
-
-SECRET_KEY = env("SECRET_KEY")
-DEBUG = env("DEBUG")
-
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
-
-INSTALLED_APPS = [
-    # Django
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-
-    # Project apps
-    "apps.accounts",
-    "apps.catalog",
-    "apps.cart",
-    "apps.orders",
-    "apps.pages",
-    "apps.core",
-
-    # Stage 2
-    # "apps.payments",
-    # "apps.delivery",
-]
-
-MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-]
-
-ROOT_URLCONF = "config.urls"
-
-WSGI_APPLICATION = "config.wsgi.application"
-
-AUTH_USER_MODEL = "auth.User"
-
-LOGIN_URL = "/accounts/login/"
-LOGIN_REDIRECT_URL = "/accounts/cabinet/"
-LOGOUT_REDIRECT_URL = "/"
-
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
-
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-```
-
----
-
-### config/settings/dev.py
-
-```python
-from .base import *
-
-DEBUG = True
-
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
-
-DATABASES = {
-    "default": env.db(
-        "DATABASE_URL",
-        default="postgres://foodshop:foodshop@127.0.0.1:5432/foodshop",
-    )
-}
-
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-```
-
----
-
-### config/settings/prod.py
-
-```python
-from .base import *
-
-DEBUG = False
-
-ALLOWED_HOSTS = [
-    "asotia.ru",
-    "www.asotia.ru",
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://asotia.ru",
-    "https://www.asotia.ru",
-]
-
-DATABASES = {
-    "default": env.db("DATABASE_URL")
-}
-
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-
-SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = False
-
-X_FRAME_OPTIONS = "DENY"
-```
-
----
-
-## 10. Зависимости
-
-Управление зависимостями — через Poetry.
-
-Файл `requirements.txt` вручную не редактировать.
-Если он понадобится для деплоя, генерировать из Poetry.
-
-Основные команды:
-
-```bash
+```powershell
 poetry install
-poetry add <package>
-poetry add --group dev <package>
-poetry remove <package>
-poetry update
-poetry shell
-```
-
-На VPS:
-
-```bash
-poetry install --only main
-```
-
----
-
-## 11. pyproject.toml
-
-```[tool.poetry]
-name = "asoti-foodshop"
-version = "0.1.0"
-description = "Asoti Food Shop"
-authors = ["Asoti"]
-package-mode = false
-
-[tool.poetry.dependencies]
-python = "^3.12"
-django = "^5.2"
-psycopg2-binary = "^2.9"
-pillow = "^10.0"
-django-environ = "^0.11"
-gunicorn = "^21.0"
-
-[tool.poetry.group.dev.dependencies]
-django-debug-toolbar = "*"
-pytest = "*"
-pytest-django = "*"
-ruff = "*"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.ruff]
-line-length = 88
-target-version = "py312"
-
-[tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "config.settings.dev"
-python_files = ["tests.py", "test_*.py", "*_tests.py"]
-```
-
----
-
-## 12. Локальное окружение Windows 10
-
-### Инструменты
-
-- VS Code
-- Расширения VS Code:
-  - Python
-  - Pylance
-  - Django
-  - DotENV
-  - GitLens
-- Windows Terminal
-- Docker Desktop
-- DBeaver
-- Git
-- WinSCP только для аварийных случаев
-
-### Локальные сервисы
-
-Локально через Docker запускаются:
-
-- PostgreSQL;
-- Redis, если понадобится.
-
-Django запускается локально через Poetry.
-
----
-
-## 13. docker-compose.yml для dev
-
-```yaml
-services:
-  db:
-    image: postgres:15
-    container_name: asoti_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-foodshop}
-      POSTGRES_USER: ${POSTGRES_USER:-foodshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-foodshop}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7
-    container_name: asoti_redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-
-volumes:
-  postgres_data:
-```
-
-Запуск:
-
-```bash
+Copy-Item .env.example .env
 docker compose up -d
+poetry run python manage.py migrate
+poetry run python manage.py runserver
 ```
 
-Остановка:
+Локальные адреса:
 
-```bash
+- сайт: `http://127.0.0.1:8000/`;
+- admin: `http://127.0.0.1:8000/admin/`;
+- debug toolbar: `http://127.0.0.1:8000/__debug__/`;
+- PostgreSQL с хоста: `127.0.0.1:5433`;
+- Redis с хоста: `127.0.0.1:6379`.
+
+`docker-compose.yml` пробрасывает PostgreSQL как `5433:5432`.
+`.env.example` уже использует порт `5433`. Встроенный fallback в
+`config/settings/dev.py` всё ещё указывает `5432`, поэтому для обычного запуска
+нужен `.env`.
+
+Остановка сервисов:
+
+```powershell
 docker compose down
 ```
 
----
+Не используйте `docker compose down -v`, если пользователь явно не попросил
+удалить локальные данные PostgreSQL.
 
-## 14. .env
+## Настройки и секреты
 
-### .env.example
+- `manage.py` по умолчанию использует `config.settings.dev`.
+- Production использует `config.settings.prod`.
+- Настройки читаются из корневого `.env` через `django-environ`.
+- `.env` и `.env_prod` не коммитятся.
+- При добавлении обязательной переменной обновляйте `.env.example` безопасным
+  примером без реального секрета.
+- Не выводите и не копируйте значения секретов из локальных env-файлов.
 
-```env
-DEBUG=True
-SECRET_KEY=change-me
+## URL, шаблоны и представления
 
-ALLOWED_HOSTS=127.0.0.1,localhost
+Текущие маршруты:
 
-DATABASE_URL=postgres://foodshop:foodshop@127.0.0.1:5432/foodshop
-
-POSTGRES_DB=foodshop
-POSTGRES_USER=foodshop
-POSTGRES_PASSWORD=foodshop
-
-REDIS_URL=redis://127.0.0.1:6379/0
+```text
+/                         pages:home
+/about/                   pages:about
+/contacts/                pages:contacts
+/delivery/                pages:delivery
+/privacy/                 pages:privacy
+/terms/                   pages:terms
+/catalog/                 catalog:index
+/cart/                    cart:detail
+/orders/checkout/         orders:checkout
+/admin/
 ```
 
-### Production .env
+- Сохраняйте `app_name` и именованные URL.
+- Новые маршруты приложения объявляйте в его `urls.py` и подключайте через
+  `include()`.
+- Для пользовательских страниц переходите от временных `HttpResponse` к
+  Django templates; не собирайте HTML строками во view.
+- Views должны координировать запрос и ответ, а не содержать объёмную
+  бизнес-логику.
 
-```env
-DEBUG=False
-SECRET_KEY=strong-production-secret-key
+## Модели и бизнес-правила
 
-ALLOWED_HOSTS=asotia.ru,www.asotia.ru
+- Денежные значения храните в `DecimalField`, не в `FloatField`.
+- Корзина MVP хранится в Django session; отдельная модель корзины или Redis
+  требуют явной продуктовой причины.
+- Заказ должен сохранять снимок цены и данных товара на момент оформления.
+- Гостевой checkout является обязательным сценарием MVP.
+- Изменение модели сопровождайте миграцией в том же наборе изменений.
+- После создания миграций проверяйте, что повторный
+  `makemigrations --check --dry-run` не находит изменений.
+- Повторяемую предметную логику выносите в понятные функции или сервисы, когда
+  повторение действительно появилось. Не создавайте абстракции заранее.
 
-DATABASE_URL=postgres://db_user:db_password@127.0.0.1:5432/asoti_foodshop
+## Стиль кода
 
-REDIS_URL=redis://127.0.0.1:6379/0
+- Следуйте существующему стилю Python и Django.
+- Ruff настроен на длину строки 88 и Python 3.12.
+- Добавляйте type hints там, где они улучшают контракт и читаемость.
+- Пользовательский интерфейс и тексты сайта — на русском языке.
+- Идентификаторы кода, имена файлов и URL — на английском.
+- Все текстовые файлы храните в UTF-8. Не коммитьте mojibake вроде
+  `РљР°С‚Р°Р»РѕРі`.
+- Не оставляйте неиспользуемые импорты и шаблонные комментарии Django в
+  изменяемых файлах.
+
+Форматирование и статическая проверка:
+
+```powershell
+poetry run ruff format .
+poetry run ruff check .
 ```
 
-Правила:
+Исправление линтером допустимо после просмотра изменений:
 
-- `.env` никогда не пушить в git;
-- `.env.example` можно и нужно хранить в git;
-- реальные пароли хранить в Bitwarden / другом менеджере паролей;
-- не хранить production `.env` в открытом облаке.
-
----
-
-## 15. Production-инфраструктура
-
-### VPS
-
-- OS: Ubuntu 22.04 LTS
-- Домен: `asotia.ru`
-- Путь к проекту: `/var/www/asoti-foodshop`
-
-### Nginx
-
-- Config: `/etc/nginx/sites-available/asoti-foodshop`
-- Symlink: `/etc/nginx/sites-enabled/asoti-foodshop`
-- Logs:
-  - `/var/log/nginx/asoti_access.log`
-  - `/var/log/nginx/asoti_error.log`
-
-### Gunicorn
-
-- Socket: `/run/asoti-foodshop.sock`
-- Service: `/etc/systemd/system/asoti-foodshop.service`
-- Workers: 2–3 для текущей нагрузки достаточно
-
-### Пути на сервере
-
-- Проект: `/var/www/asoti-foodshop`
-- Виртуальное окружение: `/var/www/asoti-foodshop/.venv`
-- Статика: `/var/www/asoti-foodshop/staticfiles/`
-- Медиа: `/var/www/asoti-foodshop/media/`
-- Логи приложения: `/var/www/asoti-foodshop/logs/`
-
----
-
-## 16. Nginx — базовая схема
-
-```nginx
-server {
-    listen 80;
-    server_name asotia.ru www.asotia.ru;
-
-    location /static/ {
-        alias /var/www/asoti-foodshop/staticfiles/;
-    }
-
-    location /media/ {
-        alias /var/www/asoti-foodshop/media/;
-    }
-
-    location / {
-        proxy_pass http://unix:/run/asoti-foodshop.sock;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
+```powershell
+poetry run ruff check . --fix
 ```
 
-После подключения SSL через Certbot основной конфиг должен работать по HTTPS.
+## Тесты и обязательные проверки
 
----
+Для новой функциональности добавляйте тесты рядом с приложением. Небольшие
+модули могут использовать `tests.py`; при росте набора переходите на каталог
+`tests/`.
 
-## 17. systemd service
+Минимальная проверка после изменения Python/Django-кода:
 
-```ini
-[Unit]
-Description=Asoti Food Shop Gunicorn Service
-After=network.target
-
-[Service]
-User=www-data
-Group=www-data
-WorkingDirectory=/var/www/asoti-foodshop
-Environment="DJANGO_SETTINGS_MODULE=config.settings.prod"
-ExecStart=/var/www/asoti-foodshop/.venv/bin/gunicorn config.wsgi:application \
-    --workers 3 \
-    --bind unix:/run/asoti-foodshop.sock
-
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
+```powershell
+poetry run ruff check .
+poetry run python manage.py check
+poetry run pytest
 ```
 
-Команды:
+После изменения моделей дополнительно:
 
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable asoti-foodshop
-sudo systemctl start asoti-foodshop
-sudo systemctl restart asoti-foodshop
-sudo systemctl status asoti-foodshop
+```powershell
+poetry run python manage.py makemigrations --check --dry-run
 ```
 
----
+Перед production-изменениями:
 
-## 18. Безопасность production
-
-Обязательно:
-
-1. `DEBUG=False`.
-2. Сильный `SECRET_KEY`.
-3. `ALLOWED_HOSTS=asotia.ru,www.asotia.ru`.
-4. `CSRF_TRUSTED_ORIGINS=https://asotia.ru,https://www.asotia.ru`.
-5. Секреты только в `.env`.
-6. `.env` не хранить в git.
-7. PostgreSQL не открывать наружу.
-8. Доступ к VPS только по SSH.
-9. SSL-сертификат через Certbot.
-10. Регулярные backup PostgreSQL.
-11. Регулярные backup директории `media/`.
-
-Желательно:
-
-1. Отдельный Linux-пользователь под проект.
-2. Ограниченные права на директории.
-3. Логи приложения отдельно от nginx-логов.
-4. Мониторинг свободного места на диске.
-5. Проверка срока действия SSL.
-
----
-
-## 19. Backup
-
-Минимальная схема backup:
-
-```bash
-pg_dump asoti_foodshop > /backup/asoti_foodshop_$(date +%F).sql
-tar -czf /backup/asoti_media_$(date +%F).tar.gz /var/www/asoti-foodshop/media/
+```powershell
+$env:DJANGO_SETTINGS_MODULE="config.settings.prod"
+poetry run python manage.py check --deploy
 ```
 
-Что бэкапить:
+Для production-проверки потребуются корректные env-переменные. Не ослабляйте
+production security settings ради прохождения локальной команды.
 
-- базу PostgreSQL;
-- папку `media/`;
-- production `.env`;
-- nginx config;
-- systemd service.
+## Правила изменений
 
-Что не обязательно бэкапить:
+- Сначала изучите затронутые файлы, настройки, URL и тесты.
+- Делайте минимальное изменение, решающее текущую задачу.
+- Не добавляйте DRF, Celery, frontend-фреймворк или новый инфраструктурный
+  слой без отдельной задачи.
+- Не меняйте публичные URL и имена маршрутов без необходимости.
+- Не редактируйте и не удаляйте пользовательские файлы в `media/`.
+- Не коммитьте кэши, логи, локальные БД, env-файлы и IDE-настройки.
+- Не выполняйте destructive-команды для Docker, БД или Git без явного запроса.
+- Сохраняйте чужие незавершённые изменения и не переписывайте их попутно.
+- Если задача меняет подтверждённое проектное решение, обновите этот файл.
 
-- `.venv`;
-- `staticfiles`;
-- кэш;
-- временные файлы.
+## Критерии готовности
 
----
+Изменение готово, когда:
 
-## 20. Админка
-
-В MVP админка Django используется как основной рабочий интерфейс администратора.
-
-Нужно настроить:
-
-1. Категории.
-2. Товары.
-3. Заказы.
-4. Позиции заказа.
-5. Страницы сайта.
-
-Для заказов в админке нужны:
-
-- фильтр по статусу;
-- поиск по телефону;
-- поиск по имени;
-- список товаров в заказе;
-- дата создания;
-- итоговая сумма;
-- быстрые действия по смене статуса.
-
----
-
-## 21. Уведомления о заказе
-
-Для MVP достаточно одного варианта:
-
-1. Email админу.
-2. Или Telegram-уведомление админу.
-
-Лучше начать с email, потому что проще.
-Telegram можно добавить позже.
-
-Пример события:
-
-- пользователь оформил заказ;
-- заказ сохранился в БД;
-- админу ушло уведомление;
-- пользователь увидел страницу “Спасибо за заказ”.
-
----
-
-## 22. Соглашения по коду
-
-1. Секреты — только в `.env`.
-2. Денежные значения — только `DecimalField`, не `FloatField`.
-3. Миграции коммитить вместе с моделями.
-4. Для каждого app — свой `urls.py`.
-5. Бизнес-логику не раздувать во views.
-6. Повторяющийся код выносить в services/selectors.
-7. Не добавлять сложные абстракции раньше необходимости.
-8. Перед деплоем проверять `python manage.py check --deploy`.
-
----
-
-## 23. Git
-
-Ветки:
-
-- `main` — production;
-- `develop` — разработка;
-- `feature/xxx` — отдельные задачи.
-
-Правила:
-
-- в `main` не коммитить напрямую;
-- сначала проверка локально;
-- потом merge в `develop`;
-- после проверки — merge в `main`;
-- миграции коммитить вместе с изменением моделей.
-
----
-
-## 24. Этапы развития
-
-### Этап 1 — MVP
-
-- структура проекта;
-- настройки dev/prod;
-- каталог;
-- товары;
-- корзина;
-- оформление заказа;
-- админка;
-- базовый frontend;
-- деплой на VPS;
-- SSL;
-- backup.
-
-### Этап 2 — улучшения магазина
-
-- онлайн-оплата;
-- доставка;
-- личный кабинет;
-- история заказов;
-- email/Telegram-уведомления;
-- Redis;
-- Celery;
-- расширенная карточка товара;
-- несколько изображений товара;
-- SEO-поля.
-
-### Этап 3 — масштабирование шаблона
-
-- возможность быстро форкать проект под другой магазин;
-- отключаемые модули;
-- улучшенная система настроек;
-- универсальные компоненты корзины и заказов;
-- документация по запуску нового магазина.
-
----
-
-## 25. Что не делать без отдельного решения
-
-Не добавлять без необходимости:
-
-1. DRF.
-2. Vue/React.
-3. Celery.
-4. Сложную систему ролей.
-5. Сложные промокоды.
-6. Микросервисы.
-7. Отдельную админ-панель вместо Django admin.
-8. Многоуровневую систему складов.
-9. Интеграцию с 1С.
-10. Сложную аналитику.
-
-Сначала простой рабочий магазин, потом расширение.
-
----
-
-## 26. Краткое резюме решений
-
-- Проект: интернет-магазин Asoti.
-- Домен: `asotia.ru`.
-- Backend: Django 5.2 LTS.
-- Python: 3.12.x.
-- БД: PostgreSQL 15.x.
-- MVP: каталог, карточка товара, корзина, оформление заказа, админка.
-- Корзина на MVP: Django sessions.
-- Оплата: этап 2.
-- Доставка API: этап 2.
-- Celery: этап 2.
-- Redis: можно подключить позже.
-- Деплой: VPS + Nginx + Gunicorn.
-- Секреты: только `.env`.
-- Основная цель: простой рабочий магазин, который можно быстро запустить и развивать.
+1. Требуемое поведение реализовано без лишнего расширения scope.
+2. Добавлены или обновлены релевантные тесты.
+3. Ruff, Django checks и pytest проходят либо документирована внешняя причина,
+   по которой проверку нельзя выполнить.
+4. Миграции добавлены и согласованы с моделями, если модели менялись.
+5. `.env.example` и этот файл обновлены, если изменились запуск, настройки или
+   архитектурные соглашения.
