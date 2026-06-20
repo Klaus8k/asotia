@@ -1009,6 +1009,7 @@ input {
   }
 
   .header-container {
+    flex-wrap: wrap;
     gap: 12px;
     min-height: 62px;
     padding: 10px 12px;
@@ -1023,7 +1024,14 @@ input {
   }
 
   .search-form {
-    display: none;
+    order: 3;
+    flex: 1 0 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .search-form input {
+    height: 42px;
   }
 
   .cart-button {
