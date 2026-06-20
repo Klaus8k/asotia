@@ -13,7 +13,10 @@
 <body>
 <header class="site-header">
     <div class="header-container">
-        <a href="{% url 'pages:home' %}" class="logo">Asotia</a>
+        <a href="{% url 'pages:home' %}" class="logo" aria-label="Asotia — главная">
+            <span class="logo-name">Asotia</span>
+            <span class="logo-caption">Food Shop</span>
+        </a>
 
         <form
             class="search-form"
@@ -36,12 +39,24 @@
         <a href="{% url 'cart:detail' %}" class="cart-button">
             <span class="cart-icon" aria-hidden="true">🛒</span>
             <span class="cart-label">Корзина</span>
-            <span class="cart-count">0</span>
+            {% if cart|length %}
+                <span class="cart-count">{{ cart|length }}</span>
+            {% endif %}
         </a>
     </div>
 </header>
 
 <main class="page-content">
+    {% if messages %}
+        <div class="messages" aria-live="polite">
+            {% for message in messages %}
+                <p class="message{% if message.tags %} message-{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     {% block content %}
     {% endblock %}
 </main>
@@ -58,27 +73,32 @@
 
 <nav class="mobile-bottom-nav" aria-label="Основная мобильная навигация">
     <a href="{% url 'pages:home' %}" class="mobile-nav-item">
-        <span>🏠</span>
+        <span aria-hidden="true">⌂</span>
         <small>Главная</small>
     </a>
 
     <a href="{% url 'catalog:index' %}" class="mobile-nav-item">
-        <span>📂</span>
+        <span aria-hidden="true">▦</span>
         <small>Каталог</small>
     </a>
 
     <a href="{% url 'cart:detail' %}" class="mobile-nav-item">
-        <span>🛒</span>
+        <span class="mobile-cart-icon" aria-hidden="true">
+            🛒
+            {% if cart|length %}
+                <b>{{ cart|length }}</b>
+            {% endif %}
+        </span>
         <small>Корзина</small>
     </a>
 
     <a href="{% url 'orders:checkout' %}" class="mobile-nav-item">
-        <span>📦</span>
+        <span aria-hidden="true">□</span>
         <small>Заказ</small>
     </a>
 
     <span class="mobile-nav-item mobile-nav-item-disabled" aria-disabled="true">
-        <span>👤</span>
+        <span aria-hidden="true">♙</span>
         <small>Профиль</small>
     </span>
 </nav>

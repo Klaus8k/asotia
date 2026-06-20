@@ -85,9 +85,36 @@
                             <div class="product-bottom">
                                 <strong>{{ product.price }} ₽</strong>
 
-                                <button type="button" aria-label="Добавить в корзину">
-                                    +
-                                </button>
+                                {% if product.stock_quantity > 0 %}
+                                    <form
+                                        action="{% url 'cart:add' product.pk %}"
+                                        method="post"
+                                        class="add-to-cart-form"
+                                    >
+                                        {% csrf_token %}
+                                        <input type="hidden" name="quantity" value="1">
+                                        <input
+                                            type="hidden"
+                                            name="next"
+                                            value="{{ request.get_full_path }}"
+                                        >
+                                        <button
+                                            type="submit"
+                                            aria-label="Добавить «{{ product.name }}» в корзину"
+                                        >
+                                            +
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <button
+                                        type="button"
+                                        class="add-to-cart-disabled"
+                                        aria-label="Товар закончился"
+                                        disabled
+                                    >
+                                        ×
+                                    </button>
+                                {% endif %}
                             </div>
                         </div>
 

@@ -31,6 +31,36 @@
                     <p>Вес: {{ product.weight_grams }} г</p>
                 {% endif %}
 
+                {% if product.stock_quantity > 0 %}
+                    <form
+                        action="{% url 'cart:add' product.pk %}"
+                        method="post"
+                        class="product-detail-cart-form"
+                    >
+                        {% csrf_token %}
+                        <label for="product-quantity">Количество</label>
+                        <div>
+                            <input
+                                id="product-quantity"
+                                type="number"
+                                name="quantity"
+                                value="1"
+                                min="1"
+                                max="{{ product.stock_quantity }}"
+                                inputmode="numeric"
+                            >
+                            <input
+                                type="hidden"
+                                name="next"
+                                value="{{ request.get_full_path }}"
+                            >
+                            <button type="submit">В корзину</button>
+                        </div>
+                    </form>
+                {% else %}
+                    <p class="product-unavailable">Товар временно закончился</p>
+                {% endif %}
+
                 {% if product.description %}
                     <section class="product-description">
                         <h2>Описание</h2>
