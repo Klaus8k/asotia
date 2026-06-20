@@ -36,6 +36,8 @@ command -v systemctl >/dev/null 2>&1 || fail "Не найден systemctl."
 
 [[ -d "${APP_DIR}/.git" ]] || fail "${APP_DIR} не является Git-репозиторием."
 [[ -f "${APP_DIR}/.env" ]] || fail "Не найден production-файл ${APP_DIR}/.env."
+[[ -f "${APP_DIR}/manage.py" ]] || fail \
+    "Не найден ${APP_DIR}/manage.py. Укажите APP_DIR с корнем Django-проекта."
 
 cd "${APP_DIR}"
 
@@ -77,7 +79,7 @@ print(
 )"
 EXPECTED_DATABASE_ENDPOINT="${EXPECTED_DATABASE_HOST}:${EXPECTED_DATABASE_PORT}"
 [[ "${DATABASE_ENDPOINT}" == "${EXPECTED_DATABASE_ENDPOINT}" ]] || fail \
-    "DATABASE_URL указывает ${DATABASE_ENDPOINT}, ожидался ${EXPECTED_DATABASE_ENDPOINT}."
+    "Файл ${APP_DIR}/.env задаёт DATABASE_URL=${DATABASE_ENDPOINT}, ожидался ${EXPECTED_DATABASE_ENDPOINT}. Миграции не запущены."
 
 log "Проверяю production-конфигурацию Django."
 poetry run python manage.py check --deploy
