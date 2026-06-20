@@ -37,6 +37,20 @@
             >
         </form>
 
+        <a
+            href="{% if user.is_authenticated %}{% url 'accounts:cabinet' %}{% else %}{% url 'accounts:login' %}{% endif %}"
+            class="account-button"
+        >
+            <span aria-hidden="true">♙</span>
+            <span>
+                {% if user.is_authenticated %}
+                    {{ user.first_name|default:user.username }}
+                {% else %}
+                    Войти
+                {% endif %}
+            </span>
+        </a>
+
         <a href="{% url 'cart:detail' %}" class="cart-button">
             <span class="cart-icon" aria-hidden="true">🛒</span>
             <span class="cart-label">Корзина</span>
@@ -98,10 +112,13 @@
         <small>Заказ</small>
     </a>
 
-    <span class="mobile-nav-item mobile-nav-item-disabled" aria-disabled="true">
+    <a
+        href="{% if user.is_authenticated %}{% url 'accounts:cabinet' %}{% else %}{% url 'accounts:login' %}{% endif %}"
+        class="mobile-nav-item"
+    >
         <span aria-hidden="true">♙</span>
         <small>Профиль</small>
-    </span>
+    </a>
 </nav>
 </body>
 </html>

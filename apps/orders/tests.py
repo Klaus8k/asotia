@@ -3,12 +3,16 @@ from decimal import Decimal
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.contrib.auth import get_user_model
 
 from apps.cart.cart import CART_SESSION_ID, Cart
 from apps.catalog.models import Category, Product
 
 from .models import Order, OrderItem
 from .services import CheckoutError, create_order_from_cart
+
+
+User = get_user_model()
 
 
 class CheckoutViewTests(TestCase):
@@ -80,6 +84,50 @@ class CheckoutViewTests(TestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock_quantity, 3)
         self.assertNotIn(CART_SESSION_ID, self.client.session)
+
+    def test_authenticated_checkout_links_order_to_user(self):
+        user = User.objects.create_user(
+            username="ivan",
+            first_name="Иван",
+            email="ivan@example.com",
+            password="StrongPass-2026",
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("orders:checkout"),
+            {
+                "customer_name": "Иван",
+                "phone": "+7 999 123-45-67",
+                "email": "ivan@example.com",
+                "delivery_address": "Москва",
+                "comment": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Order.objects.get().user, user)
+
+    def test_checkout_prefills_authenticated_user_data(self):
+        user = User.objects.create_user(
+            username="ivan",
+            first_name="Иван",
+            last_name="Петров",
+            email="ivan@example.com",
+            password="StrongPass-2026",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("orders:checkout"))
+
+        self.assertEqual(
+            response.context["form"].initial["customer_name"],
+            "Иван Петров",
+        )
+        self.assertEqual(
+            response.context["form"].initial["email"],
+            "ivan@example.com",
+        )
 
     def test_invalid_checkout_does_not_create_order(self):
         response = self.client.post(

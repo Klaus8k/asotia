@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Личный кабинет — Asotia Food Shop{% endblock %}
+
+{% block content %}
+    <section class="cabinet-page">
+        <header class="cabinet-header">
+            <div>
+                <p>Личный кабинет</p>
+                <h1>
+                    Здравствуйте,
+                    {{ user.first_name|default:user.username }}!
+                </h1>
+            </div>
+            <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <button type="submit">Выйти</button>
+            </form>
+        </header>
+
+        <div class="cabinet-layout">
+            <aside class="profile-card">
+                <div class="profile-avatar" aria-hidden="true">
+                    {{ user.first_name|default:user.username|first|upper }}
+                </div>
+                <h2>{{ user.get_full_name|default:user.username }}</h2>
+                <p>{{ user.email|default:"Email не указан" }}</p>
+                <a href="{% url 'accounts:profile_edit' %}">
+                    Изменить данные
+                </a>
+            </aside>
+
+            <div class="order-history">
+                <div class="order-history-header">
+                    <h2>Мои заказы</h2>
+                    <span>{{ orders|length }}</span>
+                </div>
+
+                {% for order in orders %}
+                    <article class="account-order-card">
+                        <div class="account-order-header">
+                            <div>
+                                <strong>Заказ №{{ order.pk }}</strong>
+                                <span>{{ order.created_at|date:"d.m.Y H:i" }}</span>
+                            </div>
+                            <span class="order-status order-status-{{ order.status }}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </div>
+
+                        <div class="account-order-items">
+                            {% for item in order.items.all %}
+                                <p>
+                                    <span>{{ item.product_name }} × {{ item.quantity }}</span>
+                                    <strong>{{ item.total_price }} ₽</strong>
+                                </p>
+                            {% endfor %}
+                        </div>
+
+                        <div class="account-order-total">
+                            <span>Итого</span>
+                            <strong>{{ order.total_price }} ₽</strong>
+                        </div>
+                    </article>
+                {% empty %}
+                    <div class="account-orders-empty">
+                        <span aria-hidden="true">□</span>
+                        <h3>Заказов пока нет</h3>
+                        <p>После оформления они появятся в этом разделе.</p>
+                        <a href="{% url 'catalog:index' %}">Перейти в каталог</a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+{% endblock %}

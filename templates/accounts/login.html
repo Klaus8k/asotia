@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Вход — Asotia Food Shop{% endblock %}
+
+{% block content %}
+    <section class="auth-page">
+        <div class="auth-card">
+            <p class="auth-eyebrow">Личный кабинет</p>
+            <h1>Вход</h1>
+            <p class="auth-intro">
+                Войдите, чтобы видеть свои заказы и данные профиля.
+            </p>
+
+            <form method="post" class="auth-form">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="auth-form-errors" role="alert">
+                        Неверный логин или пароль.
+                    </div>
+                {% endif %}
+
+                {% for field in form %}
+                    <div class="auth-field{% if field.errors %} auth-field-error{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="auth-error" role="alert">{{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+                {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+
+                <button type="submit">Войти</button>
+            </form>
+
+            <p class="auth-switch">
+                Нет аккаунта?
+                <a href="{% url 'accounts:register' %}">Зарегистрироваться</a>
+            </p>
+        </div>
+    </section>
+{% endblock %}

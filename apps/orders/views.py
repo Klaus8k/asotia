@@ -22,6 +22,8 @@ def checkout(request: HttpRequest) -> HttpResponse:
         form = CheckoutForm(request.POST)
         if form.is_valid():
             order = form.save(commit=False)
+            if request.user.is_authenticated:
+                order.user = request.user
             try:
                 create_order_from_cart(
                     order=order,
@@ -33,7 +35,14 @@ def checkout(request: HttpRequest) -> HttpResponse:
             else:
                 return redirect("orders:success", public_id=order.public_id)
     else:
-        form = CheckoutForm()
+        initial = {}
+        if request.user.is_authenticated:
+            full_name = request.user.get_full_name().strip()
+            initial = {
+                "customer_name": full_name or request.user.username,
+                "email": request.user.email,
+            }
+        form = CheckoutForm(initial=initial)
 
     return render(
         request,

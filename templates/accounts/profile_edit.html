@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Редактирование профиля — Asotia Food Shop{% endblock %}
+
+{% block content %}
+    <section class="auth-page">
+        <div class="auth-card auth-card-wide">
+            <a href="{% url 'accounts:cabinet' %}" class="auth-back">
+                ← Вернуться в кабинет
+            </a>
+            <h1>Данные профиля</h1>
+
+            <form method="post" class="auth-form">
+                {% csrf_token %}
+
+                {% for field in form %}
+                    <div class="auth-field{% if field.errors %} auth-field-error{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="auth-error" role="alert">{{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+                <button type="submit">Сохранить</button>
+            </form>
+        </div>
+    </section>
+{% endblock %}
