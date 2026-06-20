@@ -17,7 +17,15 @@
                 {% if product.image %}
                     <img src="{{ product.image.url }}" alt="{{ product.name }}">
                 {% else %}
-                    <span aria-hidden="true">🥫</span>
+                    <span class="product-placeholder product-placeholder-large">
+                        <svg aria-hidden="true" viewBox="0 0 64 64">
+                            <path d="M15 17h34v33H15z"/>
+                            <path d="M13 17c0-4 38-4 38 0s-38 4-38 0Z"/>
+                            <path d="M15 45c3 4 31 4 34 0"/>
+                            <path d="M24 28h16M24 34h16"/>
+                        </svg>
+                        <small>Фото скоро появится</small>
+                    </span>
                 {% endif %}
             </div>
 

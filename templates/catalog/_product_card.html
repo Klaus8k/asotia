@@ -1,0 +1,70 @@
+<article class="product-card">
+    <a
+        href="{% url 'catalog:product_detail' product.category.slug product.slug %}"
+        class="product-image"
+    >
+        {% if product.image %}
+            <img src="{{ product.image.url }}" alt="{{ product.name }}">
+        {% else %}
+            <span class="product-placeholder" aria-label="Изображение скоро появится">
+                <svg aria-hidden="true" viewBox="0 0 64 64">
+                    <path d="M15 17h34v33H15z"/>
+                    <path d="M13 17c0-4 38-4 38 0s-38 4-38 0Z"/>
+                    <path d="M15 45c3 4 31 4 34 0"/>
+                    <path d="M24 28h16M24 34h16"/>
+                </svg>
+                <small>Фото скоро</small>
+            </span>
+        {% endif %}
+    </a>
+
+    <div class="product-info">
+        <h3>
+            <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">
+                {{ product.name }}
+            </a>
+        </h3>
+
+        <p class="product-meta">
+            {{ product.category.name }}
+            {% if product.weight_grams %} · {{ product.weight_grams }} г{% endif %}
+        </p>
+
+        <div class="product-bottom">
+            <strong>{{ product.price }} ₽</strong>
+
+            {% if product.stock_quantity > 0 %}
+                <form
+                    action="{% url 'cart:add' product.pk %}"
+                    method="post"
+                    class="add-to-cart-form"
+                >
+                    {% csrf_token %}
+                    <input type="hidden" name="quantity" value="1">
+                    <input
+                        type="hidden"
+                        name="next"
+                        value="{{ request.get_full_path }}"
+                    >
+                    <button
+                        type="submit"
+                        aria-label="Добавить «{{ product.name }}» в корзину"
+                    >
+                        <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                    </button>
+                </form>
+            {% else %}
+                <button
+                    type="button"
+                    class="add-to-cart-disabled"
+                    aria-label="Товар закончился"
+                    disabled
+                >
+                    ×
+                </button>
+            {% endif %}
+        </div>
+    </div>
+</article>

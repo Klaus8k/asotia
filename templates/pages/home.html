@@ -1,77 +1,62 @@
 {% extends "base.html" %}
 
-{% block title %}
-Главная | Asotia Food Shop
-{% endblock %}
+{% block title %}Главная | Asotia Food Shop{% endblock %}
 
 {% block content %}
-
 <section class="hero">
-
-    <h1>
-        Натуральные продукты для вашего стола
-    </h1>
-
-    <p>
-        Консервы, заморозка и готовые блюда.
-    </p>
-
-    <a href="{% url 'catalog:index' %}">
-        Перейти в каталог
-    </a>
-
+    <div class="hero-content">
+        <p class="hero-eyebrow">Asotia Food Shop</p>
+        <h1>Натуральные продукты для вашего стола</h1>
+        <p class="hero-description">
+            Консервы, заморозка и готовые блюда с доставкой.
+        </p>
+        <a href="{% url 'catalog:index' %}">Смотреть каталог</a>
+    </div>
+    <div class="hero-placeholder" aria-label="Место для изображения баннера">
+        <span class="placeholder-can" aria-hidden="true"></span>
+        <small>Изображение баннера</small>
+    </div>
 </section>
 
-<section>
+<section class="home-section">
+    <div class="home-section-header">
+        <h2>Категории</h2>
+        <a href="{% url 'catalog:index' %}">Все <span aria-hidden="true">›</span></a>
+    </div>
 
-    <h2>Категории</h2>
-
-    <div class="categories">
-        <a href="{% url 'catalog:index' %}">Все товары</a>
+    <div class="categories category-showcase">
+        <a href="{% url 'catalog:index' %}" class="category-card">
+            <span class="category-placeholder" aria-hidden="true">Все</span>
+            <strong>Все товары</strong>
+        </a>
         {% for category in categories %}
-            <a href="{% url 'catalog:category' category.slug %}">
-                {{ category.name }}
+            <a
+                href="{% url 'catalog:category' category.slug %}"
+                class="category-card"
+            >
+                <span class="category-placeholder" aria-hidden="true">
+                    {{ category.name|first }}
+                </span>
+                <strong>{{ category.name }}</strong>
             </a>
         {% endfor %}
     </div>
-
 </section>
 
-<section>
-
-    <h2>Популярные товары</h2>
+<section class="home-section">
+    <div class="home-section-header">
+        <h2>Популярное</h2>
+        <a href="{% url 'catalog:index' %}">Все <span aria-hidden="true">›</span></a>
+    </div>
 
     {% if popular_products %}
-        <div class="home-product-grid">
+        <div class="product-grid home-product-grid">
             {% for product in popular_products %}
-                <article class="home-product-card">
-                    <a
-                        href="{% url 'catalog:product_detail' product.category.slug product.slug %}"
-                        class="home-product-visual"
-                    >
-                        {% if product.image %}
-                            <img
-                                src="{{ product.image.url }}"
-                                alt="{{ product.name }}"
-                            >
-                        {% else %}
-                            <span>🥫</span>
-                        {% endif %}
-                    </a>
-
-                    <h3>
-                        <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">
-                            {{ product.name }}
-                        </a>
-                    </h3>
-                    <strong>{{ product.price }} ₽</strong>
-                </article>
+                {% include "catalog/_product_card.html" %}
             {% endfor %}
         </div>
     {% else %}
-        <p>Товаров пока нет.</p>
+        <p class="empty-message">Товаров пока нет.</p>
     {% endif %}
-
 </section>
-
 {% endblock %}

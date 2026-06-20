@@ -5,6 +5,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
 
     <title>{% block title %}Asotia Food Shop{% endblock %}</title>
 
@@ -13,6 +14,20 @@
 <body>
 <header class="site-header">
     <div class="header-container">
+        <details class="header-menu">
+            <summary aria-label="Открыть меню">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M4 7h16M4 12h16M4 17h16"/>
+                </svg>
+            </summary>
+            <nav class="header-menu-panel" aria-label="Дополнительная навигация">
+                <a href="{% url 'catalog:index' %}">Каталог</a>
+                <a href="{% url 'pages:about' %}">О нас</a>
+                <a href="{% url 'pages:delivery' %}">Доставка и оплата</a>
+                <a href="{% url 'pages:contacts' %}">Контакты</a>
+            </nav>
+        </details>
+
         <a href="{% url 'pages:home' %}" class="logo" aria-label="Asotia — главная">
             <span class="logo-name">Asotia</span>
             <span class="logo-caption">Food Shop</span>
@@ -31,7 +46,7 @@
                 id="site-search"
                 type="search"
                 name="q"
-                placeholder="Найти товар..."
+                placeholder="Поиск по товарам"
                 value="{{ search_query|default:'' }}"
                 autocomplete="off"
             >
@@ -41,7 +56,10 @@
             href="{% if user.is_authenticated %}{% url 'accounts:cabinet' %}{% else %}{% url 'accounts:login' %}{% endif %}"
             class="account-button"
         >
-            <span aria-hidden="true">♙</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="8" r="4"/>
+                <path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>
+            </svg>
             <span>
                 {% if user.is_authenticated %}
                     {{ user.first_name|default:user.username }}
@@ -51,8 +69,12 @@
             </span>
         </a>
 
-        <a href="{% url 'cart:detail' %}" class="cart-button">
-            <span class="cart-icon" aria-hidden="true">🛒</span>
+        <a href="{% url 'cart:detail' %}" class="cart-button" aria-label="Корзина">
+            <svg class="cart-icon" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M3 4h2l2.1 10.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L20 8H6"/>
+                <circle cx="9" cy="20" r="1"/>
+                <circle cx="17" cy="20" r="1"/>
+            </svg>
             <span class="cart-label">Корзина</span>
             {% if cart|length %}
                 <span class="cart-count">{{ cart|length }}</span>
@@ -87,19 +109,40 @@
 </footer>
 
 <nav class="mobile-bottom-nav" aria-label="Основная мобильная навигация">
-    <a href="{% url 'pages:home' %}" class="mobile-nav-item">
-        <span aria-hidden="true">⌂</span>
+    <a
+        href="{% url 'pages:home' %}"
+        class="mobile-nav-item{% if request.resolver_match.view_name == 'pages:home' %} mobile-nav-item-active{% endif %}"
+    >
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m3 11 9-8 9 8"/>
+            <path d="M5 10v10h14V10M9 20v-6h6v6"/>
+        </svg>
         <small>Главная</small>
     </a>
 
-    <a href="{% url 'catalog:index' %}" class="mobile-nav-item">
-        <span aria-hidden="true">▦</span>
+    <a
+        href="{% url 'catalog:index' %}"
+        class="mobile-nav-item{% if request.resolver_match.namespace == 'catalog' %} mobile-nav-item-active{% endif %}"
+    >
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
         <small>Каталог</small>
     </a>
 
-    <a href="{% url 'cart:detail' %}" class="mobile-nav-item">
-        <span class="mobile-cart-icon" aria-hidden="true">
-            🛒
+    <a
+        href="{% url 'cart:detail' %}"
+        class="mobile-nav-item{% if request.resolver_match.namespace == 'cart' %} mobile-nav-item-active{% endif %}"
+    >
+        <span class="mobile-cart-icon">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M3 4h2l2.1 10.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L20 8H6"/>
+                <circle cx="9" cy="20" r="1"/>
+                <circle cx="17" cy="20" r="1"/>
+            </svg>
             {% if cart|length %}
                 <b>{{ cart|length }}</b>
             {% endif %}
@@ -107,16 +150,25 @@
         <small>Корзина</small>
     </a>
 
-    <a href="{% url 'orders:checkout' %}" class="mobile-nav-item">
-        <span aria-hidden="true">□</span>
+    <a
+        href="{% url 'orders:checkout' %}"
+        class="mobile-nav-item{% if request.resolver_match.namespace == 'orders' %} mobile-nav-item-active{% endif %}"
+    >
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M6 3h12v18H6z"/>
+            <path d="M9 7h6M9 11h6M9 15h4"/>
+        </svg>
         <small>Заказ</small>
     </a>
 
     <a
         href="{% if user.is_authenticated %}{% url 'accounts:cabinet' %}{% else %}{% url 'accounts:login' %}{% endif %}"
-        class="mobile-nav-item"
+        class="mobile-nav-item{% if request.resolver_match.namespace == 'accounts' %} mobile-nav-item-active{% endif %}"
     >
-        <span aria-hidden="true">♙</span>
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>
+        </svg>
         <small>Профиль</small>
     </a>
 </nav>
