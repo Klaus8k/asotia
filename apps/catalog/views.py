@@ -17,7 +17,12 @@ def catalog_index(
             categories,
             slug=category_slug,
         )
-        products = products.filter(category=current_category)
+        products = products.filter(
+            category__in=[
+                current_category,
+                *current_category.children.filter(is_active=True),
+            ]
+        )
 
     return render(
         request,
