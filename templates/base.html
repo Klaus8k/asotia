@@ -32,7 +32,8 @@
                 type="search"
                 name="q"
                 placeholder="Найти товар..."
-                value="{{ request.GET.q|default:'' }}"
+                value="{{ search_query|default:'' }}"
+                autocomplete="off"
             >
         </form>
 

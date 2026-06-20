@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 
@@ -11,6 +12,7 @@ def catalog_index(
     categories = Category.objects.filter(is_active=True).select_related("parent")
     products = Product.objects.filter(is_active=True).select_related("category")
     current_category = None
+    search_query = request.GET.get("q", "").strip()
 
     if category_slug:
         current_category = get_object_or_404(
@@ -24,6 +26,13 @@ def catalog_index(
             ]
         )
 
+    if search_query:
+        products = products.filter(
+            Q(name__icontains=search_query)
+            | Q(description__icontains=search_query)
+            | Q(category__name__icontains=search_query)
+        )
+
     return render(
         request,
         "catalog/index.html",
@@ -31,6 +40,7 @@ def catalog_index(
             "categories": categories,
             "current_category": current_category,
             "products": products,
+            "search_query": search_query,
         },
     )
 

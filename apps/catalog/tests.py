@@ -146,6 +146,48 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, self.product.name)
         self.assertNotContains(response, "Скумбрия")
 
+    def test_search_filters_products_by_name(self):
+        Product.objects.create(
+            category=self.category,
+            name="Паштет",
+            slug="pashtet",
+            description="",
+            price=Decimal("250.00"),
+        )
+
+        response = self.client.get(
+            reverse("catalog:index"),
+            {"q": "говяжья"},
+        )
+
+        self.assertContains(response, self.product.name)
+        self.assertNotContains(response, "Паштет")
+        self.assertEqual(response.context["search_query"], "говяжья")
+
+    def test_search_matches_description_and_category(self):
+        description_response = self.client.get(
+            reverse("catalog:index"),
+            {"q": "говядины"},
+        )
+        category_response = self.client.get(
+            reverse("catalog:index"),
+            {"q": "тушёнка"},
+        )
+
+        self.assertContains(description_response, self.product.name)
+        self.assertContains(category_response, self.product.name)
+
+    def test_search_shows_empty_message(self):
+        response = self.client.get(
+            reverse("catalog:index"),
+            {"q": "ананас"},
+        )
+
+        self.assertContains(
+            response,
+            "По запросу «ананас» ничего не найдено.",
+        )
+
     def test_parent_category_page_lists_child_products(self):
         parent = Category.objects.create(
             name="Консервы",

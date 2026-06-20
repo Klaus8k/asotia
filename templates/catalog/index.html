@@ -11,7 +11,9 @@
 
     <div class="catalog-header">
         <h1>
-            {% if current_category %}
+            {% if search_query %}
+                Результаты поиска: «{{ search_query }}»
+            {% elif current_category %}
                 {{ current_category.name }}
             {% else %}
                 Каталог
@@ -124,7 +126,11 @@
             </div>
         {% else %}
             <p class="empty-message">
-                Товаров пока нет.
+                {% if search_query %}
+                    По запросу «{{ search_query }}» ничего не найдено.
+                {% else %}
+                    Товаров пока нет.
+                {% endif %}
             </p>
         {% endif %}
     </section>
