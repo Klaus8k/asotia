@@ -40,31 +40,75 @@
                 {% endif %}
 
                 {% if product.stock_quantity > 0 %}
-                    <form
-                        action="{% url 'cart:add' product.pk %}"
-                        method="post"
-                        class="product-detail-cart-form"
-                    >
-                        {% csrf_token %}
-                        <label for="product-quantity">Количество</label>
-                        <div>
-                            <input
-                                id="product-quantity"
-                                type="number"
-                                name="quantity"
-                                value="1"
-                                min="1"
-                                max="{{ product.stock_quantity }}"
-                                inputmode="numeric"
+                    <div class="product-detail-cart-form">
+                        <span class="product-detail-cart-label">Количество</span>
+
+                        {% if product.cart_quantity %}
+                            <div class="product-detail-stepper">
+                                <form
+                                    action="{% url 'cart:update' product.pk %}"
+                                    method="post"
+                                >
+                                    {% csrf_token %}
+                                    <input
+                                        type="hidden"
+                                        name="quantity"
+                                        value="{{ product.cart_quantity|add:'-1' }}"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="next"
+                                        value="{{ request.get_full_path }}"
+                                    >
+                                    <button
+                                        type="submit"
+                                        aria-label="Уменьшить количество товара"
+                                    >
+                                        −
+                                    </button>
+                                </form>
+
+                                <strong aria-label="Количество в корзине">
+                                    {{ product.cart_quantity }}
+                                </strong>
+
+                                <form
+                                    action="{% url 'cart:add' product.pk %}"
+                                    method="post"
+                                >
+                                    {% csrf_token %}
+                                    <input type="hidden" name="quantity" value="1">
+                                    <input
+                                        type="hidden"
+                                        name="next"
+                                        value="{{ request.get_full_path }}"
+                                    >
+                                    <button
+                                        type="submit"
+                                        aria-label="Увеличить количество товара"
+                                        {% if product.cart_quantity >= product.stock_quantity %}disabled{% endif %}
+                                    >
+                                        +
+                                    </button>
+                                </form>
+                            </div>
+                        {% else %}
+                            <form
+                                action="{% url 'cart:add' product.pk %}"
+                                method="post"
+                                class="product-detail-add-form"
                             >
-                            <input
-                                type="hidden"
-                                name="next"
-                                value="{{ request.get_full_path }}"
-                            >
-                            <button type="submit">В корзину</button>
-                        </div>
-                    </form>
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="1">
+                                <input
+                                    type="hidden"
+                                    name="next"
+                                    value="{{ request.get_full_path }}"
+                                >
+                                <button type="submit">В корзину</button>
+                            </form>
+                        {% endif %}
+                    </div>
                 {% else %}
                     <p class="product-unavailable">Товар временно закончился</p>
                 {% endif %}

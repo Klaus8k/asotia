@@ -118,4 +118,6 @@ def product_detail(
         category__is_active=True,
         is_active=True,
     )
+    cart_quantities = request.session.get(CART_SESSION_ID, {})
+    product.cart_quantity = cart_quantities.get(str(product.pk), 0)
     return render(request, "catalog/product_detail.html", {"product": product})
