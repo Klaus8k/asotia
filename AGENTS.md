@@ -20,7 +20,7 @@ SPA-фронтенд и отдельная админ-панель в текущ
 
 ## Фактическое состояние
 
-Проект находится на стадии каркаса:
+Основной покупательский путь MVP реализован:
 
 - Django-проект и приложения созданы;
 - dev/prod-настройки разделены;
@@ -286,9 +286,9 @@ production security settings ради прохождения локальной 
 
 ## Деплой
 
-В корне проекта находится `deploy.sh` для ручного деплоя на Linux-сервер с
-Git, Poetry и systemd. По умолчанию скрипт обновляет ветку `main` и
-перезапускает сервис `asotia`.
+В репозитории находится `deploy.sh` для стандартного ручного деплоя на
+Linux-сервер с Git, Poetry и systemd. По умолчанию скрипт обновляет ветку
+`main`.
 
 ```bash
 chmod +x deploy.sh
@@ -297,19 +297,59 @@ chmod +x deploy.sh
 
 Скрипт требует production-файл `.env` в корне проекта, не допускает локальные
 изменения отслеживаемых файлов и обновляет код только через fast-forward.
-Запускайте `deploy.sh` из фактического корня Django-проекта, где одновременно
-находятся `.git`, `manage.py` и production `.env`. Старые внешние обёртки вроде
-`~/www/asotia/update.sh` не являются источником правды и могут читать другой
-env-файл.
+Запускайте его из фактического корня Django-проекта, где одновременно находятся
+`.git`, `manage.py` и production `.env`.
 Параметры можно переопределить без изменения файла:
 
 ```bash
 APP_DIR=/var/www/asotia \
 BRANCH=main \
-SERVICE_NAME=asotia \
+SERVICE_NAME=asotia.gunicorn \
 HEALTHCHECK_URL=https://asotia.ru/ \
 ./deploy.sh
 ```
+
+### Фактическая структура текущего production-сервера
+
+На текущем сервере используется историческая внешняя обёртка:
+
+```text
+/home/o_adm/www/asotia/
+  update.sh       фактически используемая команда обновления
+  .env            закрытый production env
+  .venv/          виртуальное окружение
+  app/            Git-репозиторий и корень Django с manage.py
+    .env          ссылка на ../.env
+```
+
+- SSH доступен на порту `2230`.
+- Git-ветка production — `main`.
+- systemd-сервис — `asotia.gunicorn.service`.
+- Gunicorn слушает Unix-сокет `/run/asotia/gunicorn.sock`.
+- `update.sh` выполняет fast-forward до `origin/main`, Django checks,
+  миграции, `collectstatic`, перезапуск Gunicorn и HTTP healthcheck.
+- Production `.env` должен существовать только как закрытый файл с правами
+  `600`. Не заменяйте его содержимым локального `.env.example`.
+- В `.env` обязательны безопасный `SECRET_KEY` и `DATABASE_URL` на
+  `127.0.0.1:15432`. Потеря `SECRET_KEY` не даст Gunicorn запуститься, а
+  локальный порт `5433` приведёт к ошибке соединения с БД.
+
+Обычное обновление на текущем сервере:
+
+```bash
+cd /home/o_adm/www/asotia
+./update.sh
+```
+
+Если требуется ручная диагностика:
+
+```bash
+systemctl status asotia.gunicorn --no-pager -l
+journalctl -u asotia.gunicorn -n 100 --no-pager
+```
+
+Не выводите содержимое production `.env` и не копируйте секреты в логи,
+коммиты или сообщения.
 
 ### PostgreSQL на production-сервере
 
