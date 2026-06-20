@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация — Asotia Food Shop{% endblock %}
+
+{% block content %}
+    <section class="auth-page">
+        <div class="auth-card auth-card-wide">
+            <p class="auth-eyebrow">Личный кабинет</p>
+            <h1>Регистрация</h1>
+            <p class="auth-intro">
+                Создайте аккаунт для доступа к истории заказов.
+            </p>
+
+            <form method="post" class="auth-form">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="auth-form-errors" role="alert">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                {% for field in form %}
+                    <div class="auth-field{% if field.errors %} auth-field-error{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="auth-help">{{ field.help_text|safe }}</div>
+                        {% endif %}
+                        {% if field.errors %}
+                            <div class="auth-error" role="alert">{{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+                <button type="submit">Создать аккаунт</button>
+            </form>
+
+            <p class="auth-switch">
+                Уже зарегистрированы?
+                <a href="{% url 'accounts:login' %}">Войти</a>
+            </p>
+        </div>
+    </section>
+{% endblock %}

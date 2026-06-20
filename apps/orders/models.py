@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 from apps.catalog.models import Product
@@ -17,6 +18,14 @@ class Order(models.Model):
         default=uuid.uuid4,
         unique=True,
         editable=False,
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="пользователь",
+        related_name="orders",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     customer_name = models.CharField("имя покупателя", max_length=150)
     phone = models.CharField("телефон", max_length=30)

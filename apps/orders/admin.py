@@ -20,6 +20,7 @@ class OrderItemInline(admin.TabularInline):
 class OrderAdmin(admin.ModelAdmin):
     list_display = (
         "id",
+        "user",
         "customer_name",
         "phone",
         "status",
@@ -29,6 +30,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ("status", "created_at")
     search_fields = (
         "customer_name",
+        "user__username",
         "phone",
         "email",
         "delivery_address",
