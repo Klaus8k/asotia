@@ -41,33 +41,36 @@
 
     <h2>Популярные товары</h2>
 
-    <div class="home-product-grid">
+    {% if popular_products %}
+        <div class="home-product-grid">
+            {% for product in popular_products %}
+                <article class="home-product-card">
+                    <a
+                        href="{% url 'catalog:product_detail' product.category.slug product.slug %}"
+                        class="home-product-visual"
+                    >
+                        {% if product.image %}
+                            <img
+                                src="{{ product.image.url }}"
+                                alt="{{ product.name }}"
+                            >
+                        {% else %}
+                            <span>🥫</span>
+                        {% endif %}
+                    </a>
 
-        <article class="home-product-card">
-            <div class="home-product-visual">🥫</div>
-            <h3>Тушенка говяжья</h3>
-            <strong>325 ₽</strong>
-        </article>
-
-        <article class="home-product-card">
-            <div class="home-product-visual">🥫</div>
-            <h3>Паштет куриный</h3>
-            <strong>145 ₽</strong>
-        </article>
-
-        <article class="home-product-card">
-            <div class="home-product-visual">🐟</div>
-            <h3>Скумбрия натуральная</h3>
-            <strong>210 ₽</strong>
-        </article>
-
-        <article class="home-product-card">
-            <div class="home-product-visual">🍲</div>
-            <h3>Каша с говядиной</h3>
-            <strong>195 ₽</strong>
-        </article>
-
-    </div>
+                    <h3>
+                        <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">
+                            {{ product.name }}
+                        </a>
+                    </h3>
+                    <strong>{{ product.price }} ₽</strong>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>Товаров пока нет.</p>
+    {% endif %}
 
 </section>
 

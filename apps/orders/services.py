@@ -7,6 +7,7 @@ from apps.cart.cart import Cart, CartItem
 from apps.catalog.models import Product
 
 from .models import Order, OrderItem
+from .notifications import notify_about_new_order
 
 
 class CheckoutError(Exception):
@@ -74,4 +75,8 @@ def create_order_from_cart(
 
     OrderItem.objects.bulk_create(order_items)
     cart.clear()
+    transaction.on_commit(
+        lambda: notify_about_new_order(order.pk),
+        robust=True,
+    )
     return order
