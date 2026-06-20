@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Оформление заказа — Asotia Food Shop{% endblock %}
+
+{% block content %}
+    <section class="checkout-page">
+        <div class="checkout-header">
+            <a href="{% url 'cart:detail' %}">← Вернуться в корзину</a>
+            <h1>Оформление заказа</h1>
+            <p>Регистрация не требуется.</p>
+        </div>
+
+        <form method="post" class="checkout-layout">
+            {% csrf_token %}
+
+            <div class="checkout-form-card">
+                <h2>Контактные данные</h2>
+
+                {% if form.non_field_errors %}
+                    <div class="checkout-form-errors" role="alert">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                {% for field in form %}
+                    <div class="checkout-field{% if field.errors %} checkout-field-error{% endif %}">
+                        <label for="{{ field.id_for_label }}">
+                            {{ field.label }}
+                            {% if not field.field.required %}
+                                <span>необязательно</span>
+                            {% endif %}
+                        </label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="checkout-error" role="alert">
+                                {{ field.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <aside class="checkout-summary">
+                <h2>Ваш заказ</h2>
+                <div class="checkout-order-items">
+                    {% for item in cart_items %}
+                        <div class="checkout-order-item">
+                            <span>{{ item.product.name }} × {{ item.quantity }}</span>
+                            <strong>{{ item.total_price }} ₽</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="checkout-total">
+                    <span>Итого</span>
+                    <strong>{{ cart_total }} ₽</strong>
+                </div>
+                <button type="submit">Подтвердить заказ</button>
+                <p>
+                    Нажимая кнопку, вы соглашаетесь с
+                    <a href="{% url 'pages:terms' %}">условиями покупки</a>
+                    и
+                    <a href="{% url 'pages:privacy' %}">политикой конфиденциальности</a>.
+                </p>
+            </aside>
+        </form>
+    </section>
+{% endblock %}

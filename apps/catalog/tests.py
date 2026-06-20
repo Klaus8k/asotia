@@ -115,6 +115,17 @@ class CatalogViewTests(TestCase):
         self.assertTemplateUsed(response, "catalog/index.html")
         self.assertContains(response, self.product.name)
 
+    def test_catalog_has_add_to_cart_form_for_available_product(self):
+        self.product.stock_quantity = 2
+        self.product.save(update_fields=("stock_quantity",))
+
+        response = self.client.get(reverse("catalog:index"))
+
+        self.assertContains(
+            response,
+            reverse("cart:add", args=[self.product.pk]),
+        )
+
     def test_category_page_filters_products(self):
         other_category = Category.objects.create(
             name="Рыба",

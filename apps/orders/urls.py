@@ -6,4 +6,9 @@ app_name = "orders"
 
 urlpatterns = [
     path("checkout/", views.checkout, name="checkout"),
+    path(
+        "success/<uuid:public_id>/",
+        views.order_success,
+        name="success",
+    ),
 ]

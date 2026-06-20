@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Корзина — Asotia Food Shop{% endblock %}
+
+{% block content %}
+    <section class="cart-page">
+        <div class="cart-page-header">
+            <h1>Корзина</h1>
+            {% if cart_items %}
+                <span>{{ cart|length }} шт.</span>
+            {% endif %}
+        </div>
+
+        {% if cart_items %}
+            <div class="cart-layout">
+                <div class="cart-list">
+                    {% for item in cart_items %}
+                        <article class="cart-item">
+                            <a
+                                href="{% url 'catalog:product_detail' item.product.category.slug item.product.slug %}"
+                                class="cart-item-image"
+                            >
+                                {% if item.product.image %}
+                                    <img
+                                        src="{{ item.product.image.url }}"
+                                        alt="{{ item.product.name }}"
+                                    >
+                                {% else %}
+                                    <span aria-hidden="true">🥫</span>
+                                {% endif %}
+                            </a>
+
+                            <div class="cart-item-info">
+                                <h2>
+                                    <a href="{% url 'catalog:product_detail' item.product.category.slug item.product.slug %}">
+                                        {{ item.product.name }}
+                                    </a>
+                                </h2>
+                                <p>{{ item.product.price }} ₽ за шт.</p>
+
+                                <div class="cart-item-actions">
+                                    <form
+                                        action="{% url 'cart:update' item.product.pk %}"
+                                        method="post"
+                                        class="cart-quantity-form"
+                                    >
+                                        {% csrf_token %}
+                                        <label
+                                            class="visually-hidden"
+                                            for="cart-quantity-{{ item.product.pk }}"
+                                        >
+                                            Количество товара {{ item.product.name }}
+                                        </label>
+                                        <input
+                                            id="cart-quantity-{{ item.product.pk }}"
+                                            type="number"
+                                            name="quantity"
+                                            value="{{ item.quantity }}"
+                                            min="1"
+                                            max="{{ item.product.stock_quantity }}"
+                                            inputmode="numeric"
+                                        >
+                                        <button type="submit">Обновить</button>
+                                    </form>
+
+                                    <form
+                                        action="{% url 'cart:remove' item.product.pk %}"
+                                        method="post"
+                                    >
+                                        {% csrf_token %}
+                                        <button type="submit" class="cart-remove-button">
+                                            Удалить
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <strong class="cart-item-total">
+                                {{ item.total_price }} ₽
+                            </strong>
+                        </article>
+                    {% endfor %}
+                </div>
+
+                <aside class="cart-summary">
+                    <h2>Итого</h2>
+                    <div>
+                        <span>Товары, {{ cart|length }} шт.</span>
+                        <strong>{{ cart_total }} ₽</strong>
+                    </div>
+                    <a href="{% url 'orders:checkout' %}">Оформить заказ</a>
+                    <p>Стоимость доставки будет рассчитана при оформлении.</p>
+                </aside>
+            </div>
+        {% else %}
+            <div class="empty-cart">
+                <span aria-hidden="true">🛒</span>
+                <h1>Корзина пока пуста</h1>
+                <p>Добавьте товары из каталога — они появятся здесь.</p>
+                <a href="{% url 'catalog:index' %}">Перейти в каталог</a>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

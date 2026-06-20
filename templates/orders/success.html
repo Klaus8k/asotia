@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Заказ принят — Asotia Food Shop{% endblock %}
+
+{% block content %}
+    <section class="order-success">
+        <span class="order-success-icon" aria-hidden="true">✓</span>
+        <p class="order-success-label">Заказ принят</p>
+        <h1>Спасибо, {{ order.customer_name }}!</h1>
+        <p>
+            Заказ №{{ order.pk }} на сумму
+            <strong>{{ order.total_price }} ₽</strong> сохранён.
+            Мы свяжемся с вами по телефону {{ order.phone }}.
+        </p>
+
+        <div class="order-success-details">
+            <h2>Состав заказа</h2>
+            {% for item in order.items.all %}
+                <div>
+                    <span>{{ item.product_name }} × {{ item.quantity }}</span>
+                    <strong>{{ item.total_price }} ₽</strong>
+                </div>
+            {% endfor %}
+        </div>
+
+        <a href="{% url 'catalog:index' %}">Продолжить покупки</a>
+    </section>
+{% endblock %}
