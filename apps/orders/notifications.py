@@ -67,8 +67,9 @@ def _send_email_notification(subject: str, message: str) -> None:
         )
     except Exception as error:
         logger.error(
-            "Не удалось отправить email-уведомление о новом заказе (%s).",
+            "Не удалось отправить email-уведомление о новом заказе (%s: %s).",
             type(error).__name__,
+            error,
         )
 
 
