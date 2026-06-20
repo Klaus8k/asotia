@@ -7,6 +7,7 @@ from django.shortcuts import redirect, render
 from apps.orders.models import Order
 
 from .forms import ProfileForm, RegistrationForm
+from .models import Profile
 
 
 def register(request: HttpRequest) -> HttpResponse:
@@ -28,6 +29,7 @@ def register(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def cabinet(request: HttpRequest) -> HttpResponse:
+    profile, _ = Profile.objects.get_or_create(user=request.user)
     orders = (
         Order.objects.filter(user=request.user)
         .prefetch_related("items")
@@ -36,19 +38,37 @@ def cabinet(request: HttpRequest) -> HttpResponse:
     return render(
         request,
         "accounts/cabinet.html",
-        {"orders": orders},
+        {
+            "orders": orders,
+            "profile": profile,
+        },
     )
 
 
 @login_required
 def profile_edit(request: HttpRequest) -> HttpResponse:
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+
     if request.method == "POST":
-        form = ProfileForm(request.POST, instance=request.user)
+        form = ProfileForm(
+            request.POST,
+            instance=request.user,
+            initial={
+                "phone": profile.phone,
+                "delivery_address": profile.delivery_address,
+            },
+        )
         if form.is_valid():
             form.save()
             messages.success(request, "Данные профиля обновлены.")
             return redirect("accounts:cabinet")
     else:
-        form = ProfileForm(instance=request.user)
+        form = ProfileForm(
+            instance=request.user,
+            initial={
+                "phone": profile.phone,
+                "delivery_address": profile.delivery_address,
+            },
+        )
 
     return render(request, "accounts/profile_edit.html", {"form": form})

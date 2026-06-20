@@ -1,6 +1,10 @@
+import re
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+
+from .models import Profile
 
 
 User = get_user_model()
@@ -72,9 +76,39 @@ class RegistrationForm(UserCreationForm):
 
 
 class ProfileForm(forms.ModelForm):
+    phone = forms.CharField(
+        label="Телефон",
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "autocomplete": "tel",
+                "inputmode": "tel",
+                "placeholder": "+7 999 123-45-67",
+            }
+        ),
+    )
+    delivery_address = forms.CharField(
+        label="Адрес доставки",
+        max_length=500,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "autocomplete": "street-address",
+                "placeholder": "Город, улица, дом, квартира",
+            }
+        ),
+    )
+
     class Meta:
         model = User
-        fields = ("first_name", "last_name", "email")
+        fields = (
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "delivery_address",
+        )
         labels = {
             "first_name": "Имя",
             "last_name": "Фамилия",
@@ -96,3 +130,27 @@ class ProfileForm(forms.ModelForm):
                 "Пользователь с таким email уже зарегистрирован."
             )
         return email
+
+    def clean_phone(self) -> str:
+        phone = self.cleaned_data["phone"].strip()
+        if phone:
+            digits = re.sub(r"\D", "", phone)
+            if len(digits) < 10 or len(digits) > 15:
+                raise forms.ValidationError(
+                    "Введите корректный номер телефона."
+                )
+        return phone
+
+    def save(self, commit: bool = True):
+        user = super().save(commit=commit)
+        if commit:
+            Profile.objects.update_or_create(
+                user=user,
+                defaults={
+                    "phone": self.cleaned_data["phone"].strip(),
+                    "delivery_address": self.cleaned_data[
+                        "delivery_address"
+                    ].strip(),
+                },
+            )
+        return user

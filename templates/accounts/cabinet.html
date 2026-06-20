@@ -25,6 +25,10 @@
                 </div>
                 <h2>{{ user.get_full_name|default:user.username }}</h2>
                 <p>{{ user.email|default:"Email не указан" }}</p>
+                <p>{{ profile.phone|default:"Телефон не указан" }}</p>
+                <p>
+                    {{ profile.delivery_address|default:"Адрес доставки не указан" }}
+                </p>
                 <a href="{% url 'accounts:profile_edit' %}">
                     Изменить данные
                 </a>

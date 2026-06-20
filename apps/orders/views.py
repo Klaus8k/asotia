@@ -4,6 +4,7 @@ from uuid import UUID
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
+from apps.accounts.models import Profile
 from apps.cart.cart import Cart
 
 from .forms import CheckoutForm
@@ -33,14 +34,27 @@ def checkout(request: HttpRequest) -> HttpResponse:
             except CheckoutError as error:
                 form.add_error(None, str(error))
             else:
+                if request.user.is_authenticated:
+                    Profile.objects.update_or_create(
+                        user=request.user,
+                        defaults={
+                            "phone": order.phone,
+                            "delivery_address": order.delivery_address,
+                        },
+                    )
                 return redirect("orders:success", public_id=order.public_id)
     else:
         initial = {}
         if request.user.is_authenticated:
             full_name = request.user.get_full_name().strip()
+            profile = Profile.objects.filter(user=request.user).first()
             initial = {
                 "customer_name": full_name or request.user.username,
                 "email": request.user.email,
+                "phone": profile.phone if profile else "",
+                "delivery_address": (
+                    profile.delivery_address if profile else ""
+                ),
             }
         form = CheckoutForm(initial=initial)
 
