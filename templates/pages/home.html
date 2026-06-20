@@ -27,15 +27,11 @@
     <h2>Категории</h2>
 
     <div class="categories">
+        <a href="{% url 'catalog:index' %}">Все товары</a>
         {% for category in categories %}
             <a href="{% url 'catalog:category' category.slug %}">
-                {% if category.parent %}
-                    {{ category.parent.name }} →
-                {% endif %}
                 {{ category.name }}
             </a>
-        {% empty %}
-            <p>Категорий пока нет.</p>
         {% endfor %}
     </div>
 

@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.catalog.models import Category, Product
+from apps.catalog.models import Category
 
 
 class PageViewTests(TestCase):
@@ -12,31 +12,35 @@ class PageViewTests(TestCase):
         self.assertTemplateUsed(response, "pages/home.html")
         self.assertContains(response, "Перейти в каталог")
 
-    def test_home_links_categories_with_active_products(self):
-        category = Category.objects.create(
+    def test_home_links_only_selected_categories(self):
+        canned = Category.objects.create(name="Консервы", slug="konservy")
+        frozen = Category.objects.create(name="Заморозка", slug="zamorozka")
+        stew = Category.objects.create(
+            parent=canned,
+            name="Тушёнка",
+            slug="tushenka",
+        )
+        pate = Category.objects.create(
+            parent=canned,
             name="Паштеты",
             slug="pashtety",
         )
-        empty_category = Category.objects.create(
+        hidden = Category.objects.create(
             name="Пустая категория",
             slug="empty",
-        )
-        Product.objects.create(
-            category=category,
-            name="Паштет мясной",
-            slug="pashtet-myasnoy",
-            description="",
-            price="300.00",
         )
 
         response = self.client.get(reverse("pages:home"))
 
-        self.assertContains(
-            response,
-            reverse("catalog:category", args=[category.slug]),
-        )
-        self.assertContains(response, category.name)
-        self.assertNotContains(response, empty_category.name)
+        self.assertContains(response, reverse("catalog:index"))
+        for category in [canned, frozen, stew, pate]:
+            self.assertContains(
+                response,
+                reverse("catalog:category", args=[category.slug]),
+            )
+            self.assertContains(response, category.name)
+        self.assertNotContains(response, hidden.name)
+        self.assertNotContains(response, "Консервы →")
 
     def test_information_page_uses_shared_template(self):
         response = self.client.get(reverse("pages:about"))

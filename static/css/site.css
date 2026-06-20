@@ -436,6 +436,139 @@ input {
   border-radius: 18px;
 }
 
+.information-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.information-page > h1 {
+  margin-bottom: 24px;
+}
+
+.information-lead {
+  margin-bottom: 28px;
+  padding: 20px 22px;
+  background: var(--color-soft);
+  border-radius: 14px;
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.information-lead p,
+.information-section p {
+  margin: 0;
+}
+
+.information-section {
+  padding: 24px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.information-section h2,
+.contact-card h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.information-section p,
+.information-section li,
+.contact-card {
+  line-height: 1.65;
+}
+
+.information-section p + p {
+  margin-top: 12px;
+}
+
+.information-section ul,
+.information-section ol {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.information-section li + li {
+  margin-top: 7px;
+}
+
+.information-section a,
+.contact-card a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.information-action {
+  display: inline-flex;
+  margin-top: 20px;
+  padding: 11px 16px;
+  color: var(--color-surface) !important;
+  background: var(--color-accent);
+  border-radius: 12px;
+  font-weight: 700;
+  text-decoration: none !important;
+}
+
+.information-note {
+  margin-top: 18px !important;
+  padding: 14px 16px;
+  background: #fff7e6;
+  border-left: 4px solid #e4a11b;
+  border-radius: 8px;
+}
+
+.information-requisites dl {
+  margin: 0;
+}
+
+.information-requisites dl div {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.information-requisites dl div:last-child {
+  border-bottom: 0;
+}
+
+.information-requisites dt {
+  color: var(--color-muted);
+}
+
+.information-requisites dd {
+  margin: 0;
+  font-weight: 650;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.contact-card {
+  padding: 20px;
+  background: var(--color-soft);
+  border-radius: 14px;
+}
+
+.contact-card-wide {
+  grid-column: 1 / -1;
+}
+
+.contact-card address {
+  font-style: normal;
+}
+
+.information-updated {
+  margin: 28px 0 0;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
 .breadcrumbs {
   display: flex;
   flex-wrap: wrap;
@@ -1220,6 +1353,37 @@ input {
   .catalog-header h1,
   .simple-page h1 {
     font-size: 28px;
+  }
+
+  .simple-page {
+    padding: 20px 16px;
+  }
+
+  .information-lead {
+    padding: 16px;
+    font-size: 16px;
+  }
+
+  .information-section {
+    padding: 20px 0;
+  }
+
+  .information-section h2,
+  .contact-card h2 {
+    font-size: 20px;
+  }
+
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-card-wide {
+    grid-column: auto;
+  }
+
+  .information-requisites dl div {
+    grid-template-columns: 1fr;
+    gap: 3px;
   }
 
   .product-detail-layout {
