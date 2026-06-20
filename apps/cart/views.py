@@ -45,10 +45,15 @@ def cart_update(request: HttpRequest, product_id: int) -> HttpResponse:
         is_active=True,
         stock_quantity__gt=0,
     )
-    quantity = _get_quantity(request)
-    Cart(request).update(product, quantity)
-    messages.success(request, "Количество товара обновлено.")
-    return redirect("cart:detail")
+    quantity = _get_quantity(request, minimum=0)
+    cart = Cart(request)
+    if quantity == 0:
+        cart.remove(product)
+        messages.success(request, f"«{product.name}» удалён из корзины.")
+    else:
+        cart.update(product, quantity)
+        messages.success(request, "Количество товара обновлено.")
+    return redirect(_get_redirect_url(request))
 
 
 @require_POST
@@ -59,11 +64,11 @@ def cart_remove(request: HttpRequest, product_id: int) -> HttpResponse:
     return redirect("cart:detail")
 
 
-def _get_quantity(request: HttpRequest) -> int:
+def _get_quantity(request: HttpRequest, minimum: int = 1) -> int:
     try:
-        return max(1, int(request.POST.get("quantity", 1)))
+        return max(minimum, int(request.POST.get("quantity", 1)))
     except (TypeError, ValueError):
-        return 1
+        return max(minimum, 1)
 
 
 def _get_redirect_url(request: HttpRequest) -> str:

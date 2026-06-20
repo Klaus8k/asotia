@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}{{ current_category.name }} — Asotia Food Shop{% endblock %}
+{% block body_class %}category-view{% endblock %}
+
+{% block content %}
+<section class="category-page">
+    <header class="category-mobile-header">
+        <a href="{% url 'catalog:index' %}" aria-label="Вернуться в каталог">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </a>
+        <h1>{{ current_category.name }}</h1>
+        <a href="{% url 'catalog:index' %}#site-search" aria-label="Перейти к поиску">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="7"/>
+                <path d="m20 20-4-4"/>
+            </svg>
+        </a>
+    </header>
+
+    <div class="category-toolbar">
+        <details class="category-control">
+            <summary>
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M4 6h16M7 12h10M10 18h4"/>
+                </svg>
+                Фильтр
+                {% if current_product_type %}<span class="control-dot"></span>{% endif %}
+            </summary>
+            <div class="category-control-panel">
+                <a
+                    href="?{% if current_sort != 'default' %}sort={{ current_sort }}{% endif %}"
+                    {% if not current_product_type %}class="is-selected"{% endif %}
+                >
+                    Все товары
+                </a>
+                {% for value, label in product_types %}
+                    <a
+                        href="?type={{ value }}{% if current_sort != 'default' %}&amp;sort={{ current_sort }}{% endif %}"
+                        {% if current_product_type == value %}class="is-selected"{% endif %}
+                    >
+                        {{ label }}
+                    </a>
+                {% empty %}
+                    <span>Дополнительных фильтров пока нет.</span>
+                {% endfor %}
+            </div>
+        </details>
+
+        <details class="category-control category-sort-control">
+            <summary>
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M8 6h12M8 12h8M8 18h4"/>
+                    <path d="m3 15 2 3 2-3M5 18V5"/>
+                </svg>
+                Сортировка
+            </summary>
+            <div class="category-control-panel">
+                {% for value, label in sort_options %}
+                    <a
+                        href="?{% if current_product_type %}type={{ current_product_type }}&amp;{% endif %}sort={{ value }}"
+                        {% if current_sort == value %}class="is-selected"{% endif %}
+                    >
+                        {{ label }}
+                    </a>
+                {% endfor %}
+            </div>
+        </details>
+    </div>
+
+    <div class="category-layout">
+        {% if product_types %}
+            <nav class="category-sidebar" aria-label="Фильтр по типу продукта">
+                <a
+                    href="?{% if current_sort != 'default' %}sort={{ current_sort }}{% endif %}"
+                    {% if not current_product_type %}class="is-active"{% endif %}
+                >
+                    Все
+                </a>
+                {% for value, label in product_types %}
+                    <a
+                        href="?type={{ value }}{% if current_sort != 'default' %}&amp;sort={{ current_sort }}{% endif %}"
+                        {% if current_product_type == value %}class="is-active"{% endif %}
+                    >
+                        {{ label }}
+                    </a>
+                {% endfor %}
+            </nav>
+        {% endif %}
+
+        <div class="category-results">
+            <div class="category-desktop-heading">
+                <div>
+                    <a href="{% url 'catalog:index' %}">← Каталог</a>
+                    <h1>{{ current_category.name }}</h1>
+                </div>
+                <span>{{ products|length }} товаров</span>
+            </div>
+
+            {% if products %}
+                <div class="category-product-list">
+                    {% for product in products %}
+                        {% include "catalog/_category_product.html" %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="empty-message">В этом разделе пока нет товаров.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

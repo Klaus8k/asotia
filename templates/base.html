@@ -11,7 +11,7 @@
 
     <link rel="stylesheet" href="{% static 'css/site.css' %}">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
 <header class="site-header">
     <div class="header-container">
         <details class="header-menu">
