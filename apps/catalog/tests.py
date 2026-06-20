@@ -146,6 +146,20 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, self.product.name)
         self.assertNotContains(response, "Скумбрия")
 
+    def test_parent_category_page_lists_child_products(self):
+        parent = Category.objects.create(
+            name="Консервы",
+            slug="konservy",
+        )
+        self.category.parent = parent
+        self.category.save(update_fields=("parent",))
+
+        response = self.client.get(
+            reverse("catalog:category", args=[parent.slug])
+        )
+
+        self.assertContains(response, self.product.name)
+
     def test_product_detail_uses_category_and_product_slugs(self):
         response = self.client.get(
             reverse(
