@@ -1,4 +1,4 @@
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from decimal import Decimal
 from typing import TypedDict
 
@@ -87,3 +87,14 @@ class Cart:
     def _save(self) -> None:
         self.session[CART_SESSION_ID] = self.cart
         self.session.modified = True
+
+
+def attach_cart_quantities(
+    request: HttpRequest,
+    products: Iterable[Product],
+) -> list[Product]:
+    cart_quantities = request.session.get(CART_SESSION_ID, {})
+    product_list = list(products)
+    for product in product_list:
+        product.cart_quantity = cart_quantities.get(str(product.pk), 0)
+    return product_list

@@ -34,27 +34,71 @@
             <strong>{{ product.price }} ₽</strong>
 
             {% if product.stock_quantity > 0 %}
-                <form
-                    action="{% url 'cart:add' product.pk %}"
-                    method="post"
-                    class="add-to-cart-form"
-                >
-                    {% csrf_token %}
-                    <input type="hidden" name="quantity" value="1">
-                    <input
-                        type="hidden"
-                        name="next"
-                        value="{{ request.get_full_path }}"
+                {% if product.cart_quantity %}
+                    <div
+                        class="product-card-stepper"
+                        aria-label="Количество товара {{ product.name }}"
                     >
-                    <button
-                        type="submit"
-                        aria-label="Добавить «{{ product.name }}» в корзину"
+                        <form action="{% url 'cart:update' product.pk %}" method="post">
+                            {% csrf_token %}
+                            <input
+                                type="hidden"
+                                name="quantity"
+                                value="{{ product.cart_quantity|add:'-1' }}"
+                            >
+                            <input
+                                type="hidden"
+                                name="next"
+                                value="{{ request.get_full_path }}"
+                            >
+                            <button
+                                type="submit"
+                                aria-label="Уменьшить количество товара {{ product.name }}"
+                            >
+                                −
+                            </button>
+                        </form>
+                        <span>{{ product.cart_quantity }}</span>
+                        <form action="{% url 'cart:add' product.pk %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="quantity" value="1">
+                            <input
+                                type="hidden"
+                                name="next"
+                                value="{{ request.get_full_path }}"
+                            >
+                            <button
+                                type="submit"
+                                aria-label="Увеличить количество товара {{ product.name }}"
+                                {% if product.cart_quantity >= product.stock_quantity %}disabled{% endif %}
+                            >
+                                +
+                            </button>
+                        </form>
+                    </div>
+                {% else %}
+                    <form
+                        action="{% url 'cart:add' product.pk %}"
+                        method="post"
+                        class="add-to-cart-form"
                     >
-                        <svg aria-hidden="true" viewBox="0 0 24 24">
-                            <path d="M12 5v14M5 12h14"/>
-                        </svg>
-                    </button>
-                </form>
+                        {% csrf_token %}
+                        <input type="hidden" name="quantity" value="1">
+                        <input
+                            type="hidden"
+                            name="next"
+                            value="{{ request.get_full_path }}"
+                        >
+                        <button
+                            type="submit"
+                            aria-label="Добавить «{{ product.name }}» в корзину"
+                        >
+                            <svg aria-hidden="true" viewBox="0 0 24 24">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                        </button>
+                    </form>
+                {% endif %}
             {% else %}
                 <button
                     type="button"

@@ -2,7 +2,7 @@ from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 
-from apps.cart.cart import CART_SESSION_ID
+from apps.cart.cart import CART_SESSION_ID, attach_cart_quantities
 
 from .models import Category, Product
 
@@ -45,6 +45,8 @@ def catalog_index(
             | Q(category__name__icontains=search_query)
         )
 
+    products = attach_cart_quantities(request, products)
+
     return render(
         request,
         "catalog/index.html",
@@ -85,10 +87,10 @@ def category_detail(
     else:
         product_type = ""
 
-    products = list(products.order_by(*SORT_OPTIONS[sort_key][1:]))
-    cart_quantities = request.session.get(CART_SESSION_ID, {})
-    for product in products:
-        product.cart_quantity = cart_quantities.get(str(product.pk), 0)
+    products = attach_cart_quantities(
+        request,
+        products.order_by(*SORT_OPTIONS[sort_key][1:]),
+    )
 
     return render(
         request,

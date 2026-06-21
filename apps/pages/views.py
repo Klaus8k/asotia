@@ -2,6 +2,7 @@ from django.db.models import Case, IntegerField, Value, When
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
+from apps.cart.cart import attach_cart_quantities
 from apps.catalog.models import Category, Product
 
 
@@ -39,13 +40,14 @@ def home(request: HttpRequest) -> HttpResponse:
         )
         .order_by("home_order")
     )
-    popular_products = (
+    popular_products = attach_cart_quantities(
+        request,
         Product.objects.filter(
             is_active=True,
             category__is_active=True,
         )
         .select_related("category")
-        .order_by("-is_featured", "-created_at")[:4]
+        .order_by("-is_featured", "-created_at")[:4],
     )
     return render(
         request,
