@@ -35,6 +35,8 @@ def checkout(request: HttpRequest) -> HttpResponse:
                 form.add_error(None, str(error))
             else:
                 if request.user.is_authenticated:
+                    request.user.first_name = order.customer_name
+                    request.user.save(update_fields=("first_name",))
                     Profile.objects.update_or_create(
                         user=request.user,
                         defaults={
@@ -46,15 +48,12 @@ def checkout(request: HttpRequest) -> HttpResponse:
     else:
         initial = {}
         if request.user.is_authenticated:
-            full_name = request.user.get_full_name().strip()
             profile = Profile.objects.filter(user=request.user).first()
             initial = {
-                "customer_name": full_name or request.user.username,
+                "customer_name": request.user.first_name.strip(),
                 "email": request.user.email,
                 "phone": profile.phone if profile else "",
-                "delivery_address": (
-                    profile.delivery_address if profile else ""
-                ),
+                "delivery_address": (profile.delivery_address if profile else ""),
             }
         form = CheckoutForm(initial=initial)
 

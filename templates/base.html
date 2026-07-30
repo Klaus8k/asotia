@@ -63,7 +63,7 @@
             </svg>
             <span>
                 {% if user.is_authenticated %}
-                    {{ user.first_name|default:user.username }}
+                    {{ user.first_name|default:user.email }}
                 {% else %}
                     Войти
                 {% endif %}

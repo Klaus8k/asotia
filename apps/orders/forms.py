@@ -6,6 +6,47 @@ from .models import Order
 
 
 class CheckoutForm(forms.ModelForm):
+    phone = forms.CharField(
+        label="Телефон",
+        max_length=30,
+        help_text=(
+            "Нужен для подтверждения заказа и согласования деталей. "
+            "Рекламу не отправляем."
+        ),
+        widget=forms.TextInput(
+            attrs={
+                "autocomplete": "tel",
+                "inputmode": "tel",
+                "placeholder": "+7 999 123-45-67",
+            }
+        ),
+    )
+    email = forms.EmailField(
+        label="Email",
+        required=False,
+        help_text=(
+            "Необязательно. Укажите, если хотите получить информацию о заказе по email."
+        ),
+        widget=forms.EmailInput(
+            attrs={
+                "autocomplete": "email",
+                "placeholder": "mail@example.com",
+            }
+        ),
+    )
+    delivery_address = forms.CharField(
+        label="Адрес доставки",
+        max_length=500,
+        required=False,
+        help_text="Необязательно.",
+        widget=forms.TextInput(
+            attrs={
+                "autocomplete": "street-address",
+                "placeholder": "Город, улица, дом, квартира",
+            }
+        ),
+    )
+
     class Meta:
         model = Order
         fields = (
@@ -18,25 +59,6 @@ class CheckoutForm(forms.ModelForm):
         widgets = {
             "customer_name": forms.TextInput(
                 attrs={"autocomplete": "name", "placeholder": "Иван"}
-            ),
-            "phone": forms.TextInput(
-                attrs={
-                    "autocomplete": "tel",
-                    "inputmode": "tel",
-                    "placeholder": "+7 999 123-45-67",
-                }
-            ),
-            "email": forms.EmailInput(
-                attrs={
-                    "autocomplete": "email",
-                    "placeholder": "mail@example.com",
-                }
-            ),
-            "delivery_address": forms.TextInput(
-                attrs={
-                    "autocomplete": "street-address",
-                    "placeholder": "Город, улица, дом, квартира",
-                }
             ),
             "comment": forms.Textarea(
                 attrs={
