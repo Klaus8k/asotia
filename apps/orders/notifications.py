@@ -36,7 +36,7 @@ def _build_order_message(order: Order) -> str:
         f"Имя: {order.customer_name}",
         f"Телефон: {order.phone}",
         f"Email: {order.email or 'не указан'}",
-        f"Адрес: {order.delivery_address}",
+        f"Адрес: {order.delivery_address or 'не указан'}",
         f"Комментарий: {order.comment or 'нет'}",
     ]
     return "\n".join(

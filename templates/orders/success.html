@@ -24,5 +24,10 @@
         </div>
 
         <a href="{% url 'catalog:index' %}">Продолжить покупки</a>
+        {% if not order.user %}
+            <a href="{% url 'accounts:register' %}">
+                Создать личный кабинет для будущих заказов
+            </a>
+        {% endif %}
     </section>
 {% endblock %}

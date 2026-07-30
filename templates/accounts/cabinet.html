@@ -9,7 +9,7 @@
                 <p>Личный кабинет</p>
                 <h1>
                     Здравствуйте,
-                    {{ user.first_name|default:user.username }}!
+                    {{ user.first_name|default:user.email }}!
                 </h1>
             </div>
             <form method="post" action="{% url 'accounts:logout' %}">
@@ -21,9 +21,9 @@
         <div class="cabinet-layout">
             <aside class="profile-card">
                 <div class="profile-avatar" aria-hidden="true">
-                    {{ user.first_name|default:user.username|first|upper }}
+                    {{ user.first_name|default:user.email|first|upper }}
                 </div>
-                <h2>{{ user.get_full_name|default:user.username }}</h2>
+                <h2>{{ user.first_name|default:user.email }}</h2>
                 <p>{{ user.email|default:"Email не указан" }}</p>
                 <p>{{ profile.phone|default:"Телефон не указан" }}</p>
                 <p>

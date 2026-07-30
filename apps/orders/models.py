@@ -30,7 +30,11 @@ class Order(models.Model):
     customer_name = models.CharField("имя покупателя", max_length=150)
     phone = models.CharField("телефон", max_length=30)
     email = models.EmailField("email", blank=True)
-    delivery_address = models.CharField("адрес доставки", max_length=500)
+    delivery_address = models.CharField(
+        "адрес доставки",
+        max_length=500,
+        blank=True,
+    )
     comment = models.TextField("комментарий", blank=True)
     status = models.CharField(
         "статус",
