@@ -1,4 +1,13 @@
+from io import BytesIO
+from pathlib import Path
+
+from django.core.files.base import ContentFile
 from django.db import models
+from PIL import Image, ImageOps
+
+
+PRODUCT_IMAGE_MAX_SIZE = (1200, 1200)
+PRODUCT_IMAGE_QUALITY = 82
 
 
 class Category(models.Model):
@@ -129,8 +138,51 @@ class Product(models.Model):
     def __str__(self) -> str:
         return self.name
 
+    def save(self, *args, **kwargs) -> None:
+        old_image_name = None
+        if self.pk:
+            old_image_name = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values_list("image", flat=True)
+                .first()
+            )
+
+        super().save(*args, **kwargs)
+
+        if self.image and self.image.name != old_image_name:
+            self._resize_product_image()
+
     def sync_stock_status(self) -> None:
         if self.stock_quantity > 0:
             self.stock_status = self.StockStatus.IN_STOCK
         else:
             self.stock_status = self.StockStatus.OUT_OF_STOCK
+
+    def _resize_product_image(self) -> None:
+        try:
+            self.image.open("rb")
+            with Image.open(self.image) as source:
+                image = ImageOps.exif_transpose(source)
+                image.thumbnail(PRODUCT_IMAGE_MAX_SIZE, Image.Resampling.LANCZOS)
+
+                if image.mode != "RGB":
+                    image = image.convert("RGB")
+
+                buffer = BytesIO()
+                image.save(
+                    buffer,
+                    format="JPEG",
+                    quality=PRODUCT_IMAGE_QUALITY,
+                    optimize=True,
+                    progressive=True,
+                )
+        finally:
+            self.image.close()
+
+        image_path = Path(self.image.name)
+        resized_name = str(image_path.with_suffix(".jpg"))
+        self.image.storage.delete(self.image.name)
+
+        self.image.save(resized_name, ContentFile(buffer.getvalue()), save=False)
+        type(self).objects.filter(pk=self.pk).update(image=self.image.name)
