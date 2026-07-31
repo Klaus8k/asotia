@@ -26,6 +26,11 @@ class CategoryModelTests(TestCase):
         self.assertEqual(child.parent, parent)
         self.assertIn(child, parent.children.all())
 
+    def test_unicode_slug_passes_validation(self):
+        category = Category(name="Консервы", slug="консервы")
+
+        category.full_clean()
+
 
 class ProductModelTests(TestCase):
     @classmethod
@@ -73,6 +78,17 @@ class ProductModelTests(TestCase):
 
         self.assertIsInstance(product.price, Decimal)
         self.assertEqual(product.price, Decimal("349.50"))
+
+    def test_unicode_slug_passes_validation(self):
+        product = Product(
+            category=self.category,
+            name="Филе индейки",
+            slug="филе-индейки",
+            description="Вакуум 6 штук, 0,5 кг.",
+            price=Decimal("480.00"),
+        )
+
+        product.full_clean()
 
     def test_sync_stock_status(self):
         product = Product(
