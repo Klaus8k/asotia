@@ -3,7 +3,7 @@ from django.db import models
 
 class Category(models.Model):
     name = models.CharField("название", max_length=255)
-    slug = models.SlugField("слаг", max_length=255)
+    slug = models.SlugField("слаг", max_length=255, allow_unicode=True)
     parent = models.ForeignKey(
         "self",
         verbose_name="родительская категория",
@@ -64,7 +64,7 @@ class Product(models.Model):
         on_delete=models.PROTECT,
     )
     name = models.CharField("название", max_length=255)
-    slug = models.SlugField("слаг", max_length=255)
+    slug = models.SlugField("слаг", max_length=255, allow_unicode=True)
     description = models.TextField("описание")
     price = models.DecimalField("цена", max_digits=10, decimal_places=2)
     old_price = models.DecimalField(
