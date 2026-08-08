@@ -12,7 +12,12 @@ PRODUCT_IMAGE_QUALITY = 82
 
 class Category(models.Model):
     name = models.CharField("название", max_length=255)
-    slug = models.SlugField("слаг", max_length=255, allow_unicode=True)
+    slug = models.SlugField(
+        "слаг",
+        max_length=255,
+        allow_unicode=True,
+        unique=True,
+    )
     parent = models.ForeignKey(
         "self",
         verbose_name="родительская категория",
@@ -139,6 +144,19 @@ class Product(models.Model):
         return self.name
 
     def save(self, *args, **kwargs) -> None:
+        update_fields = kwargs.get("update_fields")
+        should_sync_stock = (
+            self._state.adding
+            or update_fields is None
+            or "stock_quantity" in update_fields
+            or "stock_status" in update_fields
+        )
+        if should_sync_stock:
+            previous_status = self.stock_status
+            self.sync_stock_status()
+            if update_fields is not None and self.stock_status != previous_status:
+                kwargs["update_fields"] = tuple({*update_fields, "stock_status"})
+
         old_image_name = None
         if self.pk:
             old_image_name = (
@@ -151,22 +169,30 @@ class Product(models.Model):
         super().save(*args, **kwargs)
 
         if self.image and self.image.name != old_image_name:
-            self._resize_product_image()
+            resized_name = self._resize_product_image()
+            if old_image_name and old_image_name != resized_name:
+                self.image.storage.delete(old_image_name)
 
     def sync_stock_status(self) -> None:
         if self.stock_quantity > 0:
             self.stock_status = self.StockStatus.IN_STOCK
-        else:
+        elif self.stock_status != self.StockStatus.ON_ORDER:
             self.stock_status = self.StockStatus.OUT_OF_STOCK
 
-    def _resize_product_image(self) -> None:
+    def _resize_product_image(self) -> str:
+        source_name = self.image.name
         try:
             self.image.open("rb")
             with Image.open(self.image) as source:
                 image = ImageOps.exif_transpose(source)
                 image.thumbnail(PRODUCT_IMAGE_MAX_SIZE, Image.Resampling.LANCZOS)
 
-                if image.mode != "RGB":
+                if image.mode in {"RGBA", "LA"} or "transparency" in image.info:
+                    image = image.convert("RGBA")
+                    background = Image.new("RGB", image.size, "white")
+                    background.paste(image, mask=image.getchannel("A"))
+                    image = background
+                elif image.mode != "RGB":
                     image = image.convert("RGB")
 
                 buffer = BytesIO()
@@ -182,7 +208,14 @@ class Product(models.Model):
 
         image_path = Path(self.image.name)
         resized_name = str(image_path.with_suffix(".jpg"))
-        self.image.storage.delete(self.image.name)
+        saved_name = self.image.storage.save(
+            resized_name,
+            ContentFile(buffer.getvalue()),
+        )
+        type(self).objects.filter(pk=self.pk).update(image=saved_name)
+        self.image.name = saved_name
 
-        self.image.save(resized_name, ContentFile(buffer.getvalue()), save=False)
-        type(self).objects.filter(pk=self.pk).update(image=self.image.name)
+        if source_name != saved_name:
+            self.image.storage.delete(source_name)
+
+        return saved_name

@@ -21,7 +21,10 @@ def catalog_index(
     category_slug: str | None = None,
 ) -> HttpResponse:
     categories = Category.objects.filter(is_active=True).select_related("parent")
-    products = Product.objects.filter(is_active=True).select_related("category")
+    products = Product.objects.filter(
+        is_active=True,
+        category__is_active=True,
+    ).select_related("category")
     current_category = None
     search_query = request.GET.get("q", "").strip()
 

@@ -10,7 +10,7 @@ class PageViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pages/home.html")
-        self.assertContains(response, "Перейти в каталог")
+        self.assertContains(response, "Смотреть каталог")
 
     def test_home_links_only_selected_categories(self):
         canned = Category.objects.create(name="Консервы", slug="konservy")

@@ -45,8 +45,8 @@ CURRENT_BRANCH="$(git branch --show-current)"
 [[ "${CURRENT_BRANCH}" == "${BRANCH}" ]] || fail \
     "Текущая ветка ${CURRENT_BRANCH:-detached HEAD}, ожидалась ${BRANCH}."
 
-if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
-    fail "Есть локальные изменения отслеживаемых файлов. Деплой отменён."
+if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
+    fail "Есть локальные изменения или неотслеживаемые файлы. Деплой отменён."
 fi
 
 log "Получаю origin/${BRANCH}."
@@ -103,6 +103,8 @@ if [[ -n "${HEALTHCHECK_URL}" ]]; then
         --fail \
         --silent \
         --show-error \
+        --connect-timeout 5 \
+        --max-time 20 \
         --retry 5 \
         --retry-delay 2 \
         "${HEALTHCHECK_URL}" >/dev/null

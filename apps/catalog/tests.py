@@ -1,9 +1,14 @@
+from io import BytesIO
 from decimal import Decimal
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from PIL import Image
 
 from .models import Category, Product
 
@@ -31,6 +36,13 @@ class CategoryModelTests(TestCase):
 
         category.full_clean()
 
+    def test_category_slug_is_globally_unique(self):
+        Category.objects.create(name="Консервы", slug="catalog")
+        duplicate = Category(name="Заморозка", slug="catalog")
+
+        with self.assertRaises(ValidationError):
+            duplicate.full_clean()
+
 
 class ProductModelTests(TestCase):
     @classmethod
@@ -50,6 +62,7 @@ class ProductModelTests(TestCase):
             storage_type=Product.StorageType.CANNED,
             product_type=Product.ProductType.STEW,
             meat_type=Product.MeatType.BEEF,
+            stock_quantity=1,
         )
 
         self.assertEqual(product.category, self.category)
@@ -108,6 +121,102 @@ class ProductModelTests(TestCase):
         product.sync_stock_status()
         self.assertEqual(product.stock_status, Product.StockStatus.OUT_OF_STOCK)
 
+    def test_save_synchronizes_stock_status(self):
+        product = Product.objects.create(
+            category=self.category,
+            name="Товар",
+            slug="stock-status",
+            description="",
+            price=Decimal("100.00"),
+        )
+
+        self.assertEqual(product.stock_status, Product.StockStatus.OUT_OF_STOCK)
+
+        product.stock_quantity = 2
+        product.save(update_fields=("stock_quantity",))
+        product.refresh_from_db()
+        self.assertEqual(product.stock_status, Product.StockStatus.IN_STOCK)
+
+    def test_on_order_status_is_preserved_for_zero_stock(self):
+        product = Product.objects.create(
+            category=self.category,
+            name="Под заказ",
+            slug="on-order",
+            description="",
+            price=Decimal("100.00"),
+            stock_status=Product.StockStatus.ON_ORDER,
+        )
+
+        self.assertEqual(product.stock_status, Product.StockStatus.ON_ORDER)
+
+
+class ProductImageTests(TestCase):
+    def setUp(self):
+        self.media_directory = TemporaryDirectory()
+        self.settings_override = override_settings(MEDIA_ROOT=self.media_directory.name)
+        self.settings_override.enable()
+        self.category = Category.objects.create(name="Фото", slug="photo")
+
+    def tearDown(self):
+        self.settings_override.disable()
+        self.media_directory.cleanup()
+
+    def test_image_is_oriented_resized_and_saved_as_jpeg(self):
+        source = Image.new("RGB", (1600, 800), "red")
+        exif = Image.Exif()
+        exif[274] = 6
+        image = self._uploaded_image("phone.jpg", source, "JPEG", exif=exif)
+
+        product = self._create_product("phone", image)
+        product.refresh_from_db()
+
+        self.assertTrue(product.image.name.endswith(".jpg"))
+        with Image.open(product.image.path) as stored:
+            self.assertEqual(stored.format, "JPEG")
+            self.assertEqual(stored.mode, "RGB")
+            self.assertEqual(stored.size, (600, 1200))
+
+    def test_replacing_image_removes_previous_file(self):
+        first = self._uploaded_image(
+            "first.png",
+            Image.new("RGBA", (1400, 700), (255, 0, 0, 100)),
+            "PNG",
+        )
+        product = self._create_product("replace", first)
+        old_name = product.image.name
+
+        product.image = self._uploaded_image(
+            "second.png",
+            Image.new("RGB", (800, 800), "blue"),
+            "PNG",
+        )
+        product.save(update_fields=("image",))
+        product.refresh_from_db()
+
+        self.assertNotEqual(product.image.name, old_name)
+        self.assertFalse(product.image.storage.exists(old_name))
+        self.assertTrue(product.image.storage.exists(product.image.name))
+
+    def _create_product(self, slug, image):
+        return Product.objects.create(
+            category=self.category,
+            name=slug,
+            slug=slug,
+            description="",
+            price=Decimal("100.00"),
+            image=image,
+        )
+
+    @staticmethod
+    def _uploaded_image(name, image, image_format, **save_kwargs):
+        buffer = BytesIO()
+        image.save(buffer, format=image_format, **save_kwargs)
+        return SimpleUploadedFile(
+            name,
+            buffer.getvalue(),
+            content_type=f"image/{image_format.lower()}",
+        )
+
 
 class CatalogViewTests(TestCase):
     @classmethod
@@ -130,6 +239,24 @@ class CatalogViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "catalog/index.html")
         self.assertContains(response, self.product.name)
+
+    def test_catalog_hides_products_from_inactive_categories(self):
+        inactive_category = Category.objects.create(
+            name="Скрытая категория",
+            slug="hidden",
+            is_active=False,
+        )
+        hidden_product = Product.objects.create(
+            category=inactive_category,
+            name="Скрытый товар",
+            slug="hidden-product",
+            description="",
+            price=Decimal("100.00"),
+        )
+
+        response = self.client.get(reverse("catalog:index"))
+
+        self.assertNotContains(response, hidden_product.name)
 
     def test_catalog_has_add_to_cart_form_for_available_product(self):
         self.product.stock_quantity = 2
@@ -212,9 +339,7 @@ class CatalogViewTests(TestCase):
         self.category.parent = parent
         self.category.save(update_fields=("parent",))
 
-        response = self.client.get(
-            reverse("catalog:category", args=[parent.slug])
-        )
+        response = self.client.get(reverse("catalog:category", args=[parent.slug]))
 
         self.assertContains(response, self.product.name)
 
