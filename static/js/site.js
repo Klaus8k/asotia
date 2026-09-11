@@ -1,4 +1,32 @@
 (() => {
+  const desktopCatalog = window.matchMedia("(min-width: 900px)");
+
+  const syncCatalogFilterHeight = () => {
+    document.querySelectorAll(".catalog-filter-shell").forEach((filters) => {
+      if (!desktopCatalog.matches) {
+        filters.style.removeProperty("max-height");
+        return;
+      }
+
+      const stickyTop = 104;
+      const bottomGap = 18;
+      const visibleTop = Math.max(filters.getBoundingClientRect().top, stickyTop);
+      filters.style.maxHeight = `${Math.max(260, window.innerHeight - visibleTop - bottomGap)}px`;
+    });
+  };
+
+  const syncCatalogFilters = () => {
+    document.querySelectorAll(".catalog-filter-shell").forEach((filters) => {
+      filters.open = desktopCatalog.matches;
+    });
+    syncCatalogFilterHeight();
+  };
+
+  syncCatalogFilters();
+  desktopCatalog.addEventListener("change", syncCatalogFilters);
+  window.addEventListener("resize", syncCatalogFilterHeight);
+  window.addEventListener("scroll", syncCatalogFilterHeight, { passive: true });
+
   const isCartForm = (form) => {
     if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== "post") {
       return false;
@@ -49,6 +77,7 @@
       document.title = nextDocument.title;
       document.body.className = nextDocument.body.className;
       document.body.innerHTML = nextDocument.body.innerHTML;
+      syncCatalogFilters();
       window.scrollTo(scrollX, scrollY);
       requestAnimationFrame(() => window.scrollTo(scrollX, scrollY));
     } catch (error) {

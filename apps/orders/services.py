@@ -70,8 +70,7 @@ def create_order_from_cart(
             )
         )
         product.stock_quantity -= quantity
-        product.sync_stock_status()
-        product.save(update_fields=("stock_quantity", "stock_status"))
+        product.save(update_fields=("stock_quantity",))
 
     OrderItem.objects.bulk_create(order_items)
     cart.clear()

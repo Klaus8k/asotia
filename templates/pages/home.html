@@ -1,61 +1,116 @@
 {% extends "base.html" %}
 
-{% block title %}Главная | Asotia Food Shop{% endblock %}
+{% block title %}Натуральные продукты с доставкой — Asotia{% endblock %}
+{% block body_class %}home-page{% endblock %}
 
 {% block content %}
 <section class="hero">
     <div class="hero-content">
-        <h1>Натуральные продукты для вашего стола</h1>
+        <p class="section-kicker">Еда, которую выбирают для себя</p>
+        <h1>Настоящий вкус.<br><em>Без лишнего.</em></h1>
         <p class="hero-description">
-            Консервы, заморозка и готовые блюда с доставкой.
+            Консервы, заморозка и готовые блюда из понятных продуктов —
+            с аккуратной доставкой по Москве.
         </p>
-        <a href="{% url 'catalog:index' %}">Смотреть каталог</a>
+        <div class="hero-actions">
+            <a class="button button-primary" href="{% url 'catalog:index' %}">
+                Выбрать продукты
+                <span aria-hidden="true">→</span>
+            </a>
+            <a class="button button-quiet" href="{% url 'pages:delivery' %}">
+                Как доставляем
+            </a>
+        </div>
+        <div class="hero-trust">
+            <span><b>{{ product_count }}</b> позиций</span>
+            <span><b>{{ category_count }}</b> категории</span>
+            <span><b>Без</b> регистрации</span>
+        </div>
     </div>
-    <div class="hero-placeholder" aria-label="Место для изображения баннера">
-        <span class="placeholder-can" aria-hidden="true"></span>
-        <small>Изображение баннера</small>
+
+    <div class="hero-showcase" aria-label="Продукты Asotia">
+        <span class="hero-orbit hero-orbit-one" aria-hidden="true"></span>
+        <span class="hero-orbit hero-orbit-two" aria-hidden="true"></span>
+        {% for product in hero_products %}
+            <a
+                class="hero-product hero-product-{{ forloop.counter }}"
+                href="{% url 'catalog:product_detail' product.category.slug product.slug %}"
+                aria-label="{{ product.name }}"
+            >
+                {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                {% else %}
+                    <span>{{ product.name|first }}</span>
+                {% endif %}
+            </a>
+        {% endfor %}
+        <span class="hero-stamp">Сделано<br>с заботой</span>
     </div>
 </section>
 
-<section class="home-section">
-    <div class="home-section-header">
-        <h2>Категории</h2>
-        <a href="{% url 'catalog:index' %}">Все <span aria-hidden="true">›</span></a>
-    </div>
+<section class="home-categories showcase-section">
+    <header class="section-heading">
+        <div>
+            <p class="section-kicker">Начните отсюда</p>
+            <h2>Что сегодня на стол?</h2>
+        </div>
+        <a href="{% url 'catalog:index' %}">Весь каталог <span>→</span></a>
+    </header>
 
-    <div class="categories category-showcase">
-        <a href="{% url 'catalog:index' %}" class="category-card">
-            <span class="category-placeholder" aria-hidden="true">Все</span>
-            <strong>Все товары</strong>
+    <div class="category-showcase">
+        <a href="{% url 'catalog:index' %}" class="category-card category-card-all">
+            <span class="category-visual"><b>{{ product_count }}</b><small>товаров</small></span>
+            <span class="category-copy"><strong>Все продукты</strong><small>Смотреть витрину</small></span>
         </a>
         {% for category in categories %}
-            <a
-                href="{% url 'catalog:category' category.slug %}"
-                class="category-card"
-            >
-                <span class="category-placeholder" aria-hidden="true">
-                    {{ category.name|first }}
+            <a href="{% url 'catalog:category' category.slug %}" class="category-card">
+                <span class="category-visual">
+                    {% if category.image %}
+                        <img src="{{ category.image.url }}" alt="">
+                    {% else %}
+                        <b>{{ category.name|first }}</b>
+                        <span class="category-rings" aria-hidden="true"></span>
+                    {% endif %}
                 </span>
-                <strong>{{ category.name }}</strong>
+                <span class="category-copy">
+                    <strong>{{ category.name }}</strong>
+                    <small>Открыть категорию</small>
+                </span>
             </a>
         {% endfor %}
     </div>
 </section>
 
-<section class="home-section">
-    <div class="home-section-header">
-        <h2>Популярное</h2>
-        <a href="{% url 'catalog:index' %}">Все <span aria-hidden="true">›</span></a>
-    </div>
-
-    {% if popular_products %}
-        <div class="product-grid home-product-grid">
-            {% for product in popular_products %}
-                {% include "catalog/_product_card.html" %}
-            {% endfor %}
+{% for section in showcase_sections %}
+<section class="showcase-section product-showcase">
+    <header class="section-heading">
+        <div>
+            <p class="section-kicker">{{ section.eyebrow }}</p>
+            <h2>{{ section.title }}</h2>
+            {% if section.description %}<p>{{ section.description }}</p>{% endif %}
         </div>
-    {% else %}
-        <p class="empty-message">Товаров пока нет.</p>
-    {% endif %}
+        <a href="{{ section.url }}">Смотреть все <span>→</span></a>
+    </header>
+    <div class="product-grid showcase-products">
+        {% for product in section.products %}
+            {% include "catalog/_product_card.html" %}
+        {% endfor %}
+    </div>
+</section>
+{% endfor %}
+
+<section class="home-service-strip">
+    <article>
+        <span aria-hidden="true">01</span>
+        <div><h2>Выберите</h2><p>Соберите корзину из актуального наличия.</p></div>
+    </article>
+    <article>
+        <span aria-hidden="true">02</span>
+        <div><h2>Оформите</h2><p>Только имя и телефон — аккаунт не нужен.</p></div>
+    </article>
+    <article>
+        <span aria-hidden="true">03</span>
+        <div><h2>Получите</h2><p>Свяжемся и согласуем удобную доставку.</p></div>
+    </article>
 </section>
 {% endblock %}

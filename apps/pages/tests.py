@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.catalog.models import Category, Product
+from apps.catalog.models import Category, Collection, Product
 
 
 class PageViewTests(TestCase):
@@ -10,37 +10,27 @@ class PageViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pages/home.html")
-        self.assertContains(response, "Перейти в каталог")
+        self.assertContains(response, "Выбрать продукты")
 
-    def test_home_links_only_selected_categories(self):
+    def test_home_links_all_active_categories(self):
         canned = Category.objects.create(name="Консервы", slug="konservy")
         frozen = Category.objects.create(name="Заморозка", slug="zamorozka")
-        stew = Category.objects.create(
-            parent=canned,
-            name="Тушёнка",
-            slug="tushenka",
-        )
-        pate = Category.objects.create(
-            parent=canned,
-            name="Паштеты",
-            slug="pashtety",
-        )
         hidden = Category.objects.create(
             name="Пустая категория",
             slug="empty",
+            is_active=False,
         )
 
         response = self.client.get(reverse("pages:home"))
 
         self.assertContains(response, reverse("catalog:index"))
-        for category in [canned, frozen, stew, pate]:
+        for category in [canned, frozen]:
             self.assertContains(
                 response,
                 reverse("catalog:category", args=[category.slug]),
             )
             self.assertContains(response, category.name)
         self.assertNotContains(response, hidden.name)
-        self.assertNotContains(response, "Консервы →")
 
     def test_home_uses_products_from_database(self):
         category = Category.objects.create(
@@ -53,7 +43,7 @@ class PageViewTests(TestCase):
             slug="tushenka-govyazhya",
             description="",
             price="325.00",
-            is_featured=True,
+            is_new=True,
         )
 
         response = self.client.get(reverse("pages:home"))
@@ -67,6 +57,27 @@ class PageViewTests(TestCase):
                 args=[category.slug, product.slug],
             ),
         )
+
+    def test_home_prioritizes_active_collection_sections(self):
+        category = Category.objects.create(name="Консервы", slug="canned")
+        Product.objects.create(
+            category=category,
+            name="Филе для подборки",
+            slug="collection-product",
+            price="325.00",
+        )
+        collection = Collection.objects.create(
+            name="Выбор редакции",
+            slug="editors-choice",
+            description="Отдельная подборка из админки.",
+        )
+        collection.categories.add(category)
+
+        response = self.client.get(reverse("pages:home"))
+
+        self.assertContains(response, collection.name)
+        self.assertContains(response, collection.description)
+        self.assertEqual(response.context["showcase_sections"][0]["title"], collection.name)
 
     def test_information_page_uses_shared_template(self):
         response = self.client.get(reverse("pages:about"))

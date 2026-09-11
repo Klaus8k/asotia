@@ -1,4 +1,4 @@
-from .base import *
+from .base import *  # noqa: F403
 
 
 DEBUG = True
@@ -10,7 +10,7 @@ ALLOWED_HOSTS = [
 
 
 DATABASES = {
-    "default": env.db(
+    "default": env.db(  # noqa: F405
         "DATABASE_URL",
         default="postgres://foodshop:foodshop@127.0.0.1:5433/foodshop",
     )
@@ -20,14 +20,14 @@ DATABASES = {
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
-INSTALLED_APPS += [
+INSTALLED_APPS += [  # noqa: F405
     "debug_toolbar",
 ]
 
 
 MIDDLEWARE = [
     "debug_toolbar.middleware.DebugToolbarMiddleware",
-] + MIDDLEWARE
+] + MIDDLEWARE  # noqa: F405
 
 
 INTERNAL_IPS = [

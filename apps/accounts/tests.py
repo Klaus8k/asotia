@@ -15,17 +15,18 @@ class AccountViewTests(TestCase):
         response = self.client.post(
             reverse("accounts:register"),
             {
-                "username": "ivan",
-                "first_name": "Иван",
                 "email": "ivan@example.com",
+                "phone": "+7 999 123-45-67",
                 "password1": "StrongPass-2026",
                 "password2": "StrongPass-2026",
             },
         )
 
         self.assertRedirects(response, reverse("accounts:cabinet"))
-        user = User.objects.get(username="ivan")
+        user = User.objects.get(email="ivan@example.com")
         self.assertEqual(user.email, "ivan@example.com")
+        self.assertNotEqual(user.username, "ivan")
+        self.assertEqual(user.profile.phone, "+7 999 123-45-67")
         self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
 
     def test_registration_rejects_duplicate_email(self):
@@ -38,9 +39,8 @@ class AccountViewTests(TestCase):
         response = self.client.post(
             reverse("accounts:register"),
             {
-                "username": "new-user",
-                "first_name": "Новый",
                 "email": "USER@example.com",
+                "phone": "",
                 "password1": "StrongPass-2026",
                 "password2": "StrongPass-2026",
             },
@@ -97,14 +97,16 @@ class AccountViewTests(TestCase):
             reverse("accounts:profile_edit"),
             {
                 "first_name": "Иван",
-                "last_name": "Петров",
                 "email": "new@example.com",
+                "phone": "",
+                "delivery_address": "",
             },
         )
 
         self.assertRedirects(response, reverse("accounts:cabinet"))
         user.refresh_from_db()
-        self.assertEqual(user.get_full_name(), "Иван Петров")
+        self.assertEqual(user.first_name, "Иван")
+        self.assertEqual(user.last_name, "")
         self.assertEqual(user.email, "new@example.com")
 
     def test_logout_requires_post_and_ends_session(self):

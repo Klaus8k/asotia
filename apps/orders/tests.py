@@ -122,7 +122,7 @@ class CheckoutViewTests(TestCase):
 
         self.assertEqual(
             response.context["form"].initial["customer_name"],
-            "Иван Петров",
+            "Иван",
         )
         self.assertEqual(
             response.context["form"].initial["email"],

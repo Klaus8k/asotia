@@ -25,8 +25,10 @@
             </a>
         </h2>
         <p>
-            {{ product.get_product_type_display }}
+            {{ product.category.name }}
             {% if product.weight_grams %} · {{ product.weight_grams }} г{% endif %}
+            {% if product.volume_ml %} · {{ product.volume_ml }} мл{% endif %}
+            {% if product.units_count %} · {{ product.units_count }} шт.{% endif %}
         </p>
         <strong>{{ product.price }} ₽</strong>
     </div>
