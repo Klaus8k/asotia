@@ -9,11 +9,16 @@ __pycache__/
 
 # Django
 *.log
+*.sql
 local_settings.py
 db.sqlite3
 media/
 staticfiles/
 backups/
+
+# Local generated artifacts
+_artifact_build/node_modules/
+outputs/
 
 # Env
 .venv/
