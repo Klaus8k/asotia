@@ -1,13 +1,16 @@
 import json
 from decimal import Decimal
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from PIL import Image
 
 from .models import (
     Attribute,
@@ -110,6 +113,74 @@ class CatalogModelTests(TestCase):
                 product=product,
                 attribute_value=value,
             )
+
+
+class ProductImageTests(TestCase):
+    def setUp(self):
+        self.media_directory = TemporaryDirectory()
+        self.settings_override = override_settings(MEDIA_ROOT=self.media_directory.name)
+        self.settings_override.enable()
+        self.category = Category.objects.create(name="Фото", slug="photo")
+
+    def tearDown(self):
+        self.settings_override.disable()
+        self.media_directory.cleanup()
+
+    def test_image_is_oriented_resized_and_saved_as_jpeg(self):
+        source = Image.new("RGB", (1600, 800), "red")
+        exif = Image.Exif()
+        exif[274] = 6
+        image = self._uploaded_image("phone.jpg", source, "JPEG", exif=exif)
+
+        product = self._create_product("phone", image)
+        product.refresh_from_db()
+
+        self.assertTrue(product.image.name.endswith(".jpg"))
+        with Image.open(product.image.path) as stored:
+            self.assertEqual(stored.format, "JPEG")
+            self.assertEqual(stored.mode, "RGB")
+            self.assertEqual(stored.size, (600, 1200))
+
+    def test_replacing_image_removes_previous_file(self):
+        first = self._uploaded_image(
+            "first.png",
+            Image.new("RGBA", (1400, 700), (255, 0, 0, 100)),
+            "PNG",
+        )
+        product = self._create_product("replace", first)
+        old_name = product.image.name
+
+        product.image = self._uploaded_image(
+            "second.png",
+            Image.new("RGB", (800, 800), "blue"),
+            "PNG",
+        )
+        product.save(update_fields=("image",))
+        product.refresh_from_db()
+
+        self.assertNotEqual(product.image.name, old_name)
+        self.assertFalse(product.image.storage.exists(old_name))
+        self.assertTrue(product.image.storage.exists(product.image.name))
+
+    def _create_product(self, slug, image):
+        return Product.objects.create(
+            category=self.category,
+            name=slug,
+            slug=slug,
+            description="",
+            price=Decimal("100.00"),
+            image=image,
+        )
+
+    @staticmethod
+    def _uploaded_image(name, image, image_format, **save_kwargs):
+        buffer = BytesIO()
+        image.save(buffer, format=image_format, **save_kwargs)
+        return SimpleUploadedFile(
+            name,
+            buffer.getvalue(),
+            content_type=f"image/{image_format.lower()}",
+        )
 
 
 class ProductFilteringTests(TestCase):

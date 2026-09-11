@@ -1,7 +1,15 @@
 from collections import defaultdict
 from collections.abc import Iterable
+from io import BytesIO
+from pathlib import Path
 
+from django.core.files.base import ContentFile
 from django.db import models
+from PIL import Image, ImageOps
+
+
+PRODUCT_IMAGE_MAX_SIZE = (1200, 1200)
+PRODUCT_IMAGE_QUALITY = 82
 
 
 class Category(models.Model):
@@ -23,7 +31,6 @@ class Category(models.Model):
 
     def __str__(self) -> str:
         return self.name
-
 
 class Attribute(models.Model):
     name = models.CharField("название", max_length=255)
@@ -162,6 +169,66 @@ class Product(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+    def save(self, *args, **kwargs) -> None:
+        has_uploaded_image = bool(self.image and not self.image._committed)
+        old_image_name = None
+        if self.pk:
+            old_image_name = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values_list("image", flat=True)
+                .first()
+            )
+
+        super().save(*args, **kwargs)
+
+        if self.image and has_uploaded_image and self.image.name != old_image_name:
+            resized_name = self._resize_product_image()
+            if old_image_name and old_image_name != resized_name:
+                self.image.storage.delete(old_image_name)
+
+    def _resize_product_image(self) -> str:
+        source_name = self.image.name
+        try:
+            self.image.open("rb")
+            with Image.open(self.image) as source:
+                image = ImageOps.exif_transpose(source)
+                image.thumbnail(PRODUCT_IMAGE_MAX_SIZE, Image.Resampling.LANCZOS)
+
+                if image.mode in {"RGBA", "LA"} or "transparency" in image.info:
+                    image = image.convert("RGBA")
+                    background = Image.new("RGB", image.size, "white")
+                    background.paste(image, mask=image.getchannel("A"))
+                    image = background
+                elif image.mode != "RGB":
+                    image = image.convert("RGB")
+
+                buffer = BytesIO()
+                image.save(
+                    buffer,
+                    format="JPEG",
+                    quality=PRODUCT_IMAGE_QUALITY,
+                    optimize=True,
+                    progressive=True,
+                )
+        finally:
+            self.image.close()
+
+        image_path = Path(self.image.name)
+        resized_name = str(image_path.with_suffix(".jpg"))
+        saved_name = self.image.storage.save(
+            resized_name,
+            ContentFile(buffer.getvalue()),
+        )
+        type(self).objects.filter(pk=self.pk).update(image=saved_name)
+        self.image.name = saved_name
+
+        if source_name != saved_name:
+            self.image.storage.delete(source_name)
+
+        return saved_name
 
 
 class ProductAttributeValue(models.Model):

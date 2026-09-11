@@ -26,14 +26,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     # Project apps
     "apps.accounts",
     "apps.catalog",
     "apps.cart",
     "apps.orders",
     "apps.pages",
-    "apps.core",
 ]
 
 
