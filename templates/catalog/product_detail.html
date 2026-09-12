@@ -1,125 +1,121 @@
 {% extends "base.html" %}
 
-{% block title %}{{ product.name }} — Asoti Food Shop{% endblock %}
+{% block title %}{{ product.name }} — Asotia{% endblock %}
+{% block body_class %}product-page-view{% endblock %}
 
 {% block content %}
-    <article class="product-detail">
-        <nav class="breadcrumbs" aria-label="Хлебные крошки">
-            <a href="{% url 'catalog:index' %}">Каталог</a>
-            <span>→</span>
-            <a href="{% url 'catalog:category' product.category.slug %}">
-                {{ product.category.name }}
-            </a>
-        </nav>
+<div class="product-page">
+    <nav class="breadcrumbs" aria-label="Хлебные крошки">
+        <a href="{% url 'catalog:index' %}">Каталог</a><span>·</span>
+        <a href="{% url 'catalog:category' product.category.slug %}">{{ product.category.name }}</a>
+        <span>·</span><span>{{ product.name }}</span>
+    </nav>
 
-        <div class="product-detail-layout">
-            <div class="product-detail-image">
-                {% if product.image %}
-                    <img src="{{ product.image.url }}" alt="{{ product.name }}">
+    <article class="product-detail">
+        <div class="product-detail-image">
+            <span class="product-detail-category">{{ product.category.name }}</span>
+            {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}">
+            {% else %}
+                <span class="product-placeholder product-placeholder-large">
+                    <svg aria-hidden="true" viewBox="0 0 64 64"><path d="M15 17h34v33H15z"/><path d="M13 17c0-4 38-4 38 0s-38 4-38 0Z"/></svg>
+                    <small>Фото скоро появится</small>
+                </span>
+            {% endif %}
+        </div>
+
+        <div class="product-detail-info">
+            <p class="section-kicker">{{ product.category.name }}</p>
+            <h1>{{ product.name }}</h1>
+            <p class="product-detail-lead">
+                {% if product.description %}{{ product.description|truncatewords:24 }}{% else %}Натуральный продукт из каталога Asotia.{% endif %}
+            </p>
+
+            <div class="product-detail-price-row">
+                <span><strong>{{ product.price }} ₽</strong>{% if product.old_price %}<del>{{ product.old_price }} ₽</del>{% endif %}</span>
+                {% if product.stock_quantity > 0 %}
+                    <b class="stock-label is-available">В наличии</b>
                 {% else %}
-                    <span class="product-placeholder product-placeholder-large">
-                        <svg aria-hidden="true" viewBox="0 0 64 64">
-                            <path d="M15 17h34v33H15z"/>
-                            <path d="M13 17c0-4 38-4 38 0s-38 4-38 0Z"/>
-                            <path d="M15 45c3 4 31 4 34 0"/>
-                            <path d="M24 28h16M24 34h16"/>
-                        </svg>
-                        <small>Фото скоро появится</small>
-                    </span>
+                    <b class="stock-label">Нет в наличии</b>
                 {% endif %}
             </div>
 
-            <div class="product-detail-info">
-                <h1>{{ product.name }}</h1>
-                <p class="product-detail-price">{{ product.price }} ₽</p>
-                <p>Наличие: {{ product.get_stock_status_display }}</p>
-                <p>Остаток: {{ product.stock_quantity }}</p>
+            <div class="product-detail-facts">
+                {% if product.weight_grams %}<span><small>Вес</small><b>{{ product.weight_grams }} г</b></span>{% endif %}
+                {% if product.volume_ml %}<span><small>Объём</small><b>{{ product.volume_ml }} мл</b></span>{% endif %}
+                {% if product.units_count %}<span><small>Количество</small><b>{{ product.units_count }} шт.</b></span>{% endif %}
+                <span><small>Остаток</small><b>{{ product.stock_quantity }} шт.</b></span>
+            </div>
 
-                {% if product.weight_grams %}
-                    <p>Вес: {{ product.weight_grams }} г</p>
-                {% endif %}
-
-                {% if product.stock_quantity > 0 %}
-                    <div class="product-detail-cart-form">
-                        <span class="product-detail-cart-label">Количество</span>
-
-                        {% if product.cart_quantity %}
-                            <div class="product-detail-stepper">
-                                <form
-                                    action="{% url 'cart:update' product.pk %}"
-                                    method="post"
-                                >
-                                    {% csrf_token %}
-                                    <input
-                                        type="hidden"
-                                        name="quantity"
-                                        value="{{ product.cart_quantity|add:'-1' }}"
-                                    >
-                                    <input
-                                        type="hidden"
-                                        name="next"
-                                        value="{{ request.get_full_path }}"
-                                    >
-                                    <button
-                                        type="submit"
-                                        aria-label="Уменьшить количество товара"
-                                    >
-                                        −
-                                    </button>
-                                </form>
-
-                                <strong aria-label="Количество в корзине">
-                                    {{ product.cart_quantity }}
-                                </strong>
-
-                                <form
-                                    action="{% url 'cart:add' product.pk %}"
-                                    method="post"
-                                >
-                                    {% csrf_token %}
-                                    <input type="hidden" name="quantity" value="1">
-                                    <input
-                                        type="hidden"
-                                        name="next"
-                                        value="{{ request.get_full_path }}"
-                                    >
-                                    <button
-                                        type="submit"
-                                        aria-label="Увеличить количество товара"
-                                        {% if product.cart_quantity >= product.stock_quantity %}disabled{% endif %}
-                                    >
-                                        +
-                                    </button>
-                                </form>
-                            </div>
-                        {% else %}
-                            <form
-                                action="{% url 'cart:add' product.pk %}"
-                                method="post"
-                                class="product-detail-add-form"
-                            >
+            {% if product.stock_quantity > 0 %}
+                <div class="product-detail-cart">
+                    {% if product.cart_quantity %}
+                        <div class="product-detail-stepper">
+                            <form action="{% url 'cart:update' product.pk %}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="{{ product.cart_quantity|add:'-1' }}">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" aria-label="Уменьшить количество">−</button>
+                            </form>
+                            <strong>{{ product.cart_quantity }}</strong>
+                            <form action="{% url 'cart:add' product.pk %}" method="post">
                                 {% csrf_token %}
                                 <input type="hidden" name="quantity" value="1">
-                                <input
-                                    type="hidden"
-                                    name="next"
-                                    value="{{ request.get_full_path }}"
-                                >
-                                <button type="submit">В корзину</button>
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" aria-label="Увеличить количество" {% if product.cart_quantity >= product.stock_quantity %}disabled{% endif %}>+</button>
                             </form>
-                        {% endif %}
-                    </div>
-                {% else %}
-                    <p class="product-unavailable">Товар временно закончился</p>
-                {% endif %}
+                        </div>
+                        <a class="button button-primary" href="{% url 'cart:detail' %}">Перейти в корзину</a>
+                    {% else %}
+                        <form action="{% url 'cart:add' product.pk %}" method="post" class="product-detail-add-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="quantity" value="1">
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit">Добавить в корзину <span>＋</span></button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% else %}
+                <p class="product-unavailable">Товар временно закончился</p>
+            {% endif %}
 
-                {% if product.description %}
-                    <section class="product-description">
-                        <h2>Описание</h2>
-                        {{ product.description|linebreaks }}
-                    </section>
-                {% endif %}
-            </div>
+            <p class="product-delivery-note">
+                <span aria-hidden="true">↗</span>
+                Доставку и время получения согласуем после оформления.
+            </p>
         </div>
     </article>
+
+    <div class="product-detail-lower">
+        <section class="product-description">
+            <p class="section-kicker">О продукте</p>
+            <h2>Описание</h2>
+            {% if product.description %}{{ product.description|linebreaks }}{% else %}<p>Подробное описание скоро появится.</p>{% endif %}
+        </section>
+
+        {% if product.public_attribute_values %}
+            <section class="product-attributes">
+                <p class="section-kicker">Подробности</p>
+                <h2>Характеристики</h2>
+                <dl>
+                    {% for value in product.public_attribute_values %}
+                        <div><dt>{{ value.attribute.name }}</dt><dd>{{ value.name }}</dd></div>
+                    {% endfor %}
+                </dl>
+            </section>
+        {% endif %}
+    </div>
+
+    {% if related_products %}
+        <section class="showcase-section related-products">
+            <header class="section-heading">
+                <div><p class="section-kicker">Ещё из раздела</p><h2>Вам может понравиться</h2></div>
+                <a href="{% url 'catalog:category' product.category.slug %}">Смотреть категорию <span>→</span></a>
+            </header>
+            <div class="product-grid">
+                {% for product in related_products %}{% include "catalog/_product_card.html" %}{% endfor %}
+            </div>
+        </section>
+    {% endif %}
+</div>
 {% endblock %}

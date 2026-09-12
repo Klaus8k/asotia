@@ -1,3 +1,5 @@
+from collections import defaultdict
+from collections.abc import Iterable
 from io import BytesIO
 from pathlib import Path
 
@@ -13,20 +15,10 @@ PRODUCT_IMAGE_QUALITY = 82
 class Category(models.Model):
     name = models.CharField("название", max_length=255)
     slug = models.SlugField(
-        "слаг",
-        max_length=255,
-        allow_unicode=True,
-        unique=True,
-    )
-    parent = models.ForeignKey(
-        "self",
-        verbose_name="родительская категория",
-        related_name="children",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
+        "слаг", max_length=255, allow_unicode=True, unique=True
     )
     description = models.TextField("описание", blank=True)
+    image = models.ImageField("изображение", upload_to="categories/", blank=True)
     is_active = models.BooleanField("активна", default=True)
     sort_order = models.PositiveIntegerField("порядок сортировки", default=0)
     created_at = models.DateTimeField("дата создания", auto_now_add=True)
@@ -40,37 +32,88 @@ class Category(models.Model):
     def __str__(self) -> str:
         return self.name
 
+class Attribute(models.Model):
+    name = models.CharField("название", max_length=255)
+    slug = models.SlugField(
+        "слаг", max_length=255, allow_unicode=True, unique=True
+    )
+    is_active = models.BooleanField("активна", default=True)
+    sort_order = models.PositiveIntegerField("порядок сортировки", default=0)
+
+    class Meta:
+        verbose_name = "характеристика"
+        verbose_name_plural = "характеристики"
+        ordering = ("sort_order", "name")
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class AttributeValue(models.Model):
+    attribute = models.ForeignKey(
+        Attribute,
+        verbose_name="характеристика",
+        related_name="values",
+        on_delete=models.PROTECT,
+    )
+    name = models.CharField("значение", max_length=255)
+    slug = models.SlugField("слаг", max_length=255, allow_unicode=True)
+    is_active = models.BooleanField("активно", default=True)
+    sort_order = models.PositiveIntegerField("порядок сортировки", default=0)
+
+    class Meta:
+        verbose_name = "значение характеристики"
+        verbose_name_plural = "значения характеристик"
+        ordering = ("attribute", "sort_order", "name")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("attribute", "name"),
+                name="unique_attribute_value_name",
+            ),
+            models.UniqueConstraint(
+                fields=("attribute", "slug"),
+                name="unique_attribute_value_slug",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.attribute}: {self.name}"
+
+
+class ProductQuerySet(models.QuerySet):
+    def public(self):
+        return self.filter(is_active=True, category__is_active=True)
+
+    def filter_by_attribute_values(
+        self,
+        values: Iterable[AttributeValue | int],
+    ):
+        requested_ids = [
+            value.pk if isinstance(value, AttributeValue) else value
+            for value in values
+        ]
+        if not requested_ids:
+            return self
+
+        active_values = AttributeValue.objects.filter(
+            pk__in=requested_ids,
+            is_active=True,
+            attribute__is_active=True,
+        ).values_list("attribute_id", "pk")
+        ids_by_attribute: dict[int, list[int]] = defaultdict(list)
+        for attribute_id, value_id in active_values:
+            ids_by_attribute[attribute_id].append(value_id)
+
+        if not ids_by_attribute:
+            return self.none()
+
+        queryset = self
+        for value_ids in ids_by_attribute.values():
+            queryset = queryset.filter(attribute_values__in=value_ids)
+        return queryset.distinct()
+
 
 class Product(models.Model):
-    class StorageType(models.TextChoices):
-        CANNED = "canned", "Консервы"
-        FROZEN = "frozen", "Заморозка"
-        OTHER = "other", "Другое"
-
-    class ProductType(models.TextChoices):
-        STEW = "stew", "Тушёнка"
-        PATE = "pate", "Паштет"
-        FISH = "fish", "Рыбные продукты"
-        VEGETABLES = "vegetables", "Овощные продукты"
-        READY_MEAL = "ready_meal", "Готовое блюдо"
-        SEMI_FINISHED = "semi_finished", "Полуфабрикат"
-        MEAT = "meat", "Мясо"
-        OTHER = "other", "Другое"
-
-    class MeatType(models.TextChoices):
-        BEEF = "beef", "Говядина"
-        PORK = "pork", "Свинина"
-        CHICKEN = "chicken", "Курица"
-        TURKEY = "turkey", "Индейка"
-        LAMB = "lamb", "Баранина"
-        MIXED = "mixed", "Смешанное"
-        NONE = "none", "Не указано"
-
-    class StockStatus(models.TextChoices):
-        IN_STOCK = "in_stock", "В наличии"
-        OUT_OF_STOCK = "out_of_stock", "Нет в наличии"
-        ON_ORDER = "on_order", "Под заказ"
-
     category = models.ForeignKey(
         Category,
         verbose_name="категория",
@@ -79,7 +122,7 @@ class Product(models.Model):
     )
     name = models.CharField("название", max_length=255)
     slug = models.SlugField("слаг", max_length=255, allow_unicode=True)
-    description = models.TextField("описание")
+    description = models.TextField("описание", blank=True)
     price = models.DecimalField("цена", max_digits=10, decimal_places=2)
     old_price = models.DecimalField(
         "старая цена",
@@ -89,45 +132,29 @@ class Product(models.Model):
         blank=True,
     )
     weight_grams = models.PositiveIntegerField(
-        "вес в граммах",
-        null=True,
-        blank=True,
+        "вес в граммах", null=True, blank=True
     )
-    image = models.ImageField(
-        "изображение",
-        upload_to="products/",
-        blank=True,
+    volume_ml = models.PositiveIntegerField(
+        "объём в миллилитрах", null=True, blank=True
     )
+    units_count = models.PositiveIntegerField(
+        "количество единиц", null=True, blank=True
+    )
+    image = models.ImageField("изображение", upload_to="products/", blank=True)
     stock_quantity = models.PositiveIntegerField("остаток", default=0)
-    storage_type = models.CharField(
-        "тип хранения",
-        max_length=10,
-        choices=StorageType.choices,
-        default=StorageType.OTHER,
-    )
-    product_type = models.CharField(
-        "тип продукта",
-        max_length=20,
-        choices=ProductType.choices,
-        default=ProductType.OTHER,
-    )
-    meat_type = models.CharField(
-        "вид мяса",
-        max_length=10,
-        choices=MeatType.choices,
-        default=MeatType.NONE,
-        blank=True,
-    )
     is_active = models.BooleanField("активен", default=True)
-    is_featured = models.BooleanField("рекомендуемый", default=False)
-    stock_status = models.CharField(
-        "наличие",
-        max_length=15,
-        choices=StockStatus.choices,
-        default=StockStatus.IN_STOCK,
+    is_new = models.BooleanField("новинка", default=False)
+    attribute_values = models.ManyToManyField(
+        AttributeValue,
+        verbose_name="значения характеристик",
+        related_name="products",
+        through="ProductAttributeValue",
+        blank=True,
     )
     created_at = models.DateTimeField("дата создания", auto_now_add=True)
     updated_at = models.DateTimeField("дата обновления", auto_now=True)
+
+    objects = ProductQuerySet.as_manager()
 
     class Meta:
         verbose_name = "товар"
@@ -143,20 +170,9 @@ class Product(models.Model):
     def __str__(self) -> str:
         return self.name
 
-    def save(self, *args, **kwargs) -> None:
-        update_fields = kwargs.get("update_fields")
-        should_sync_stock = (
-            self._state.adding
-            or update_fields is None
-            or "stock_quantity" in update_fields
-            or "stock_status" in update_fields
-        )
-        if should_sync_stock:
-            previous_status = self.stock_status
-            self.sync_stock_status()
-            if update_fields is not None and self.stock_status != previous_status:
-                kwargs["update_fields"] = tuple({*update_fields, "stock_status"})
 
+    def save(self, *args, **kwargs) -> None:
+        has_uploaded_image = bool(self.image and not self.image._committed)
         old_image_name = None
         if self.pk:
             old_image_name = (
@@ -168,16 +184,10 @@ class Product(models.Model):
 
         super().save(*args, **kwargs)
 
-        if self.image and self.image.name != old_image_name:
+        if self.image and has_uploaded_image and self.image.name != old_image_name:
             resized_name = self._resize_product_image()
             if old_image_name and old_image_name != resized_name:
                 self.image.storage.delete(old_image_name)
-
-    def sync_stock_status(self) -> None:
-        if self.stock_quantity > 0:
-            self.stock_status = self.StockStatus.IN_STOCK
-        elif self.stock_status != self.StockStatus.ON_ORDER:
-            self.stock_status = self.StockStatus.OUT_OF_STOCK
 
     def _resize_product_image(self) -> str:
         source_name = self.image.name
@@ -219,3 +229,116 @@ class Product(models.Model):
             self.image.storage.delete(source_name)
 
         return saved_name
+
+
+class ProductAttributeValue(models.Model):
+    product = models.ForeignKey(
+        Product,
+        verbose_name="товар",
+        related_name="attribute_assignments",
+        on_delete=models.CASCADE,
+    )
+    attribute_value = models.ForeignKey(
+        AttributeValue,
+        verbose_name="значение характеристики",
+        related_name="product_assignments",
+        on_delete=models.PROTECT,
+    )
+
+    class Meta:
+        verbose_name = "характеристика товара"
+        verbose_name_plural = "характеристики товара"
+        ordering = ("attribute_value__attribute", "attribute_value")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("product", "attribute_value"),
+                name="unique_product_attribute_value",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.product}: {self.attribute_value}"
+
+
+class Collection(models.Model):
+    name = models.CharField("название", max_length=255)
+    slug = models.SlugField(
+        "слаг", max_length=255, allow_unicode=True, unique=True
+    )
+    description = models.TextField("описание", blank=True)
+    image = models.ImageField("изображение", upload_to="collections/", blank=True)
+    is_active = models.BooleanField("активна", default=True)
+    sort_order = models.PositiveIntegerField("порядок сортировки", default=0)
+    categories = models.ManyToManyField(
+        Category,
+        verbose_name="категории",
+        related_name="collections",
+        blank=True,
+    )
+    attribute_values = models.ManyToManyField(
+        AttributeValue,
+        verbose_name="правила по характеристикам",
+        related_name="collections",
+        through="CollectionRule",
+        blank=True,
+    )
+    created_at = models.DateTimeField("дата создания", auto_now_add=True)
+    updated_at = models.DateTimeField("дата обновления", auto_now=True)
+
+    class Meta:
+        verbose_name = "подборка"
+        verbose_name_plural = "подборки"
+        ordering = ("sort_order", "name")
+
+    def __str__(self) -> str:
+        return self.name
+
+    def products(self):
+        if not self.is_active:
+            return Product.objects.none()
+
+        products = Product.objects.public()
+        if self.categories.exists():
+            category_ids = self.categories.filter(is_active=True).values_list(
+                "pk", flat=True
+            )
+            products = products.filter(category_id__in=category_ids)
+
+        if self.rules.exists():
+            value_ids = self.rules.filter(
+                attribute_value__is_active=True,
+                attribute_value__attribute__is_active=True,
+            ).values_list("attribute_value_id", flat=True)
+            if not value_ids.exists():
+                return products.none()
+            products = products.filter_by_attribute_values(value_ids)
+        return products
+
+
+class CollectionRule(models.Model):
+    collection = models.ForeignKey(
+        Collection,
+        verbose_name="подборка",
+        related_name="rules",
+        on_delete=models.CASCADE,
+    )
+    attribute_value = models.ForeignKey(
+        AttributeValue,
+        verbose_name="значение характеристики",
+        related_name="collection_rules",
+        on_delete=models.PROTECT,
+    )
+
+    class Meta:
+        verbose_name = "правило подборки"
+        verbose_name_plural = "правила подборок"
+        ordering = ("attribute_value__attribute", "attribute_value")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("collection", "attribute_value"),
+                name="unique_collection_attribute_value",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.collection}: {self.attribute_value}"

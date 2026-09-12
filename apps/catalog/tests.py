@@ -1,153 +1,118 @@
-from io import BytesIO
+import json
 from decimal import Decimal
+from io import BytesIO
+from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
 
-from .models import Category, Product
+from .models import (
+    Attribute,
+    AttributeValue,
+    Category,
+    Collection,
+    CollectionRule,
+    Product,
+    ProductAttributeValue,
+)
 
 
-class CategoryModelTests(TestCase):
-    def test_create_category(self):
-        category = Category.objects.create(name="Консервы", slug="konservy")
-
-        self.assertEqual(category.name, "Консервы")
-        self.assertTrue(category.is_active)
-
-    def test_create_nested_category(self):
-        parent = Category.objects.create(name="Консервы", slug="konservy")
-        child = Category.objects.create(
-            name="Тушёнка",
-            slug="tushenka",
-            parent=parent,
-        )
-
-        self.assertEqual(child.parent, parent)
-        self.assertIn(child, parent.children.all())
-
-    def test_unicode_slug_passes_validation(self):
+class CatalogModelTests(TestCase):
+    def test_unicode_slugs_pass_validation(self):
         category = Category(name="Консервы", slug="консервы")
-
         category.full_clean()
+        category.save()
 
-    def test_category_slug_is_globally_unique(self):
-        Category.objects.create(name="Консервы", slug="catalog")
-        duplicate = Category(name="Заморозка", slug="catalog")
-
-        with self.assertRaises(ValidationError):
-            duplicate.full_clean()
-
-
-class ProductModelTests(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        cls.category = Category.objects.create(
-            name="Тушёнка",
-            slug="tushenka",
-        )
-
-    def test_create_product(self):
-        product = Product.objects.create(
-            category=self.category,
-            name="Тушёнка говяжья",
-            slug="tushenka-govyazhya",
-            description="Тушёнка из говядины.",
-            price=Decimal("399.90"),
-            storage_type=Product.StorageType.CANNED,
-            product_type=Product.ProductType.STEW,
-            meat_type=Product.MeatType.BEEF,
-            stock_quantity=1,
-        )
-
-        self.assertEqual(product.category, self.category)
-        self.assertEqual(product.stock_status, Product.StockStatus.IN_STOCK)
-
-    def test_product_string_representation(self):
-        product = Product.objects.create(
-            category=self.category,
-            name="Паштет мясной",
-            slug="pashtet-myasnoy",
-            description="Мясной паштет.",
-            price=Decimal("249.00"),
-        )
-
-        self.assertEqual(str(product), "Паштет мясной")
-
-    def test_price_is_stored_as_decimal(self):
-        product = Product.objects.create(
-            category=self.category,
-            name="Тушёнка свиная",
-            slug="tushenka-svinaya",
-            description="Тушёнка из свинины.",
-            price=Decimal("349.50"),
-        )
-        product.refresh_from_db()
-
-        self.assertIsInstance(product.price, Decimal)
-        self.assertEqual(product.price, Decimal("349.50"))
-
-    def test_unicode_slug_passes_validation(self):
         product = Product(
-            category=self.category,
+            category=category,
             name="Филе индейки",
             slug="филе-индейки",
-            description="Вакуум 6 штук, 0,5 кг.",
             price=Decimal("480.00"),
         )
-
         product.full_clean()
 
-    def test_sync_stock_status(self):
+    def test_product_slug_is_unique_inside_category(self):
+        first = Category.objects.create(name="Консервы", slug="canned")
+        second = Category.objects.create(name="Заморозка", slug="frozen")
+        Product.objects.create(
+            category=first,
+            name="Товар",
+            slug="product",
+            price=Decimal("100.00"),
+        )
+        Product.objects.create(
+            category=second,
+            name="Товар",
+            slug="product",
+            price=Decimal("100.00"),
+        )
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Product.objects.create(
+                category=first,
+                name="Дубликат",
+                slug="product",
+                price=Decimal("100.00"),
+            )
+
+    def test_stock_quantity_cannot_be_negative(self):
+        category = Category.objects.create(name="Консервы", slug="canned")
         product = Product(
-            category=self.category,
+            category=category,
             name="Товар",
-            slug="tovar",
-            description="",
+            slug="product",
             price=Decimal("100.00"),
-            stock_quantity=5,
-            stock_status=Product.StockStatus.OUT_OF_STOCK,
+            stock_quantity=-1,
         )
 
-        product.sync_stock_status()
-        self.assertEqual(product.stock_status, Product.StockStatus.IN_STOCK)
+        with self.assertRaises(ValidationError):
+            product.full_clean()
 
-        product.stock_quantity = 0
-        product.sync_stock_status()
-        self.assertEqual(product.stock_status, Product.StockStatus.OUT_OF_STOCK)
+    def test_attribute_value_is_unique_inside_attribute(self):
+        attribute = Attribute.objects.create(name="Состав", slug="composition")
+        AttributeValue.objects.create(
+            attribute=attribute,
+            name="Мясо",
+            slug="meat",
+        )
 
-    def test_save_synchronizes_stock_status(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            AttributeValue.objects.create(
+                attribute=attribute,
+                name="Мясо",
+                slug="different",
+            )
+
+    def test_product_attribute_link_cannot_be_duplicated(self):
+        category = Category.objects.create(name="Консервы", slug="canned")
         product = Product.objects.create(
-            category=self.category,
+            category=category,
             name="Товар",
-            slug="stock-status",
-            description="",
+            slug="product",
             price=Decimal("100.00"),
         )
-
-        self.assertEqual(product.stock_status, Product.StockStatus.OUT_OF_STOCK)
-
-        product.stock_quantity = 2
-        product.save(update_fields=("stock_quantity",))
-        product.refresh_from_db()
-        self.assertEqual(product.stock_status, Product.StockStatus.IN_STOCK)
-
-    def test_on_order_status_is_preserved_for_zero_stock(self):
-        product = Product.objects.create(
-            category=self.category,
-            name="Под заказ",
-            slug="on-order",
-            description="",
-            price=Decimal("100.00"),
-            stock_status=Product.StockStatus.ON_ORDER,
+        attribute = Attribute.objects.create(name="Состав", slug="composition")
+        value = AttributeValue.objects.create(
+            attribute=attribute,
+            name="Мясо",
+            slug="meat",
+        )
+        ProductAttributeValue.objects.create(
+            product=product,
+            attribute_value=value,
         )
 
-        self.assertEqual(product.stock_status, Product.StockStatus.ON_ORDER)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            ProductAttributeValue.objects.create(
+                product=product,
+                attribute_value=value,
+            )
 
 
 class ProductImageTests(TestCase):
@@ -218,169 +183,244 @@ class ProductImageTests(TestCase):
         )
 
 
+class ProductFilteringTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.canned = Category.objects.create(name="Консервы", slug="canned")
+        cls.frozen = Category.objects.create(name="Заморозка", slug="frozen")
+        cls.ingredient = Attribute.objects.create(
+            name="Основной ингредиент",
+            slug="main-ingredient",
+        )
+        cls.kind = Attribute.objects.create(
+            name="Вид продукции",
+            slug="product-type",
+        )
+        cls.chicken = AttributeValue.objects.create(
+            attribute=cls.ingredient,
+            name="Курица",
+            slug="chicken",
+        )
+        cls.turkey = AttributeValue.objects.create(
+            attribute=cls.ingredient,
+            name="Индейка",
+            slug="turkey",
+        )
+        cls.beef = AttributeValue.objects.create(
+            attribute=cls.ingredient,
+            name="Говядина",
+            slug="beef",
+        )
+        cls.ready = AttributeValue.objects.create(
+            attribute=cls.kind,
+            name="Готовое блюдо",
+            slug="ready-meal",
+        )
+        cls.stew = AttributeValue.objects.create(
+            attribute=cls.kind,
+            name="Тушёнка",
+            slug="stew",
+        )
+        cls.chicken_ready = cls.make_product(
+            "Куриный болоньезе", cls.canned, cls.chicken, cls.ready
+        )
+        cls.chicken_stew = cls.make_product(
+            "Куриное филе", cls.canned, cls.chicken, cls.stew
+        )
+        cls.turkey_ready = cls.make_product(
+            "Индейка с гречкой", cls.frozen, cls.turkey, cls.ready
+        )
+        cls.beef_ready = cls.make_product(
+            "Гречка с говядиной", cls.canned, cls.beef, cls.ready
+        )
+
+    @classmethod
+    def make_product(cls, name, category, *values):
+        product = Product.objects.create(
+            category=category,
+            name=name,
+            slug=name.lower().replace(" ", "-"),
+            price=Decimal("100.00"),
+            stock_quantity=5,
+        )
+        product.attribute_values.add(*values)
+        return product
+
+    def test_values_of_one_attribute_are_combined_with_or(self):
+        products = Product.objects.public().filter_by_attribute_values(
+            [self.chicken, self.turkey]
+        )
+
+        self.assertCountEqual(
+            products,
+            [self.chicken_ready, self.chicken_stew, self.turkey_ready],
+        )
+
+    def test_different_attributes_are_combined_with_and(self):
+        products = Product.objects.public().filter_by_attribute_values(
+            [self.chicken, self.ready]
+        )
+
+        self.assertEqual(list(products), [self.chicken_ready])
+
+    def test_results_are_distinct_for_multiple_matching_values(self):
+        self.chicken_ready.attribute_values.add(self.turkey)
+
+        products = Product.objects.public().filter_by_attribute_values(
+            [self.chicken, self.turkey]
+        )
+
+        self.assertEqual(products.filter(pk=self.chicken_ready.pk).count(), 1)
+
+    def test_inactive_values_do_not_participate(self):
+        self.chicken.is_active = False
+        self.chicken.save(update_fields=("is_active",))
+
+        products = Product.objects.public().filter_by_attribute_values(
+            [self.chicken]
+        )
+
+        self.assertFalse(products.exists())
+
+    def test_public_excludes_inactive_product_and_category(self):
+        self.chicken_ready.is_active = False
+        self.chicken_ready.save(update_fields=("is_active",))
+        self.frozen.is_active = False
+        self.frozen.save(update_fields=("is_active",))
+
+        self.assertCountEqual(
+            Product.objects.public(),
+            [self.chicken_stew, self.beef_ready],
+        )
+
+
+class CollectionTests(ProductFilteringTests):
+    def test_collection_uses_or_and_and_rules(self):
+        collection = Collection.objects.create(
+            name="Птица в готовых блюдах",
+            slug="poultry-ready",
+        )
+        CollectionRule.objects.create(
+            collection=collection,
+            attribute_value=self.chicken,
+        )
+        CollectionRule.objects.create(
+            collection=collection,
+            attribute_value=self.turkey,
+        )
+        CollectionRule.objects.create(
+            collection=collection,
+            attribute_value=self.ready,
+        )
+
+        self.assertCountEqual(
+            collection.products(),
+            [self.chicken_ready, self.turkey_ready],
+        )
+
+    def test_collection_categories_are_combined_with_or(self):
+        collection = Collection.objects.create(name="В двух разделах", slug="two")
+        collection.categories.add(self.canned, self.frozen)
+
+        self.assertCountEqual(
+            collection.products(),
+            [
+                self.chicken_ready,
+                self.chicken_stew,
+                self.turkey_ready,
+                self.beef_ready,
+            ],
+        )
+
+    def test_collection_without_categories_uses_whole_catalog(self):
+        collection = Collection.objects.create(name="Курица", slug="chicken")
+        CollectionRule.objects.create(
+            collection=collection,
+            attribute_value=self.chicken,
+        )
+
+        self.assertCountEqual(
+            collection.products(),
+            [self.chicken_ready, self.chicken_stew],
+        )
+
+    def test_inactive_rule_does_not_make_collection_match_everything(self):
+        collection = Collection.objects.create(name="Скрытое правило", slug="hidden")
+        self.chicken.is_active = False
+        self.chicken.save(update_fields=("is_active",))
+        CollectionRule.objects.create(
+            collection=collection,
+            attribute_value=self.chicken,
+        )
+
+        self.assertFalse(collection.products().exists())
+
+
 class CatalogViewTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.category = Category.objects.create(
-            name="Тушёнка",
-            slug="tushenka",
-        )
+        cls.category = Category.objects.create(name="Консервы", slug="консервы")
         cls.product = Product.objects.create(
             category=cls.category,
             name="Тушёнка говяжья",
-            slug="tushenka-govyazhya",
+            slug="тушёнка-говяжья",
             description="Тушёнка из говядины.",
             price=Decimal("399.90"),
+            stock_quantity=2,
         )
+        kind = Attribute.objects.create(
+            name="Вид продукции",
+            slug="product-type",
+        )
+        cls.stew = AttributeValue.objects.create(
+            attribute=kind,
+            name="Тушёнка",
+            slug="stew",
+        )
+        cls.product.attribute_values.add(cls.stew)
 
-    def test_catalog_uses_template_and_lists_product(self):
+    def test_catalog_lists_product_and_add_form(self):
         response = self.client.get(reverse("catalog:index"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "catalog/index.html")
         self.assertContains(response, self.product.name)
+        self.assertContains(response, reverse("cart:add", args=[self.product.pk]))
 
-    def test_catalog_hides_products_from_inactive_categories(self):
-        inactive_category = Category.objects.create(
-            name="Скрытая категория",
-            slug="hidden",
-            is_active=False,
-        )
-        hidden_product = Product.objects.create(
-            category=inactive_category,
-            name="Скрытый товар",
-            slug="hidden-product",
-            description="",
-            price=Decimal("100.00"),
-        )
-
-        response = self.client.get(reverse("catalog:index"))
-
-        self.assertNotContains(response, hidden_product.name)
-
-    def test_catalog_has_add_to_cart_form_for_available_product(self):
-        self.product.stock_quantity = 2
-        self.product.save(update_fields=("stock_quantity",))
-
-        response = self.client.get(reverse("catalog:index"))
-
-        self.assertContains(
-            response,
-            reverse("cart:add", args=[self.product.pk]),
-        )
-
-    def test_category_page_filters_products(self):
-        other_category = Category.objects.create(
-            name="Рыба",
-            slug="fish",
-        )
-        Product.objects.create(
-            category=other_category,
-            name="Скумбрия",
-            slug="skumbriya",
-            description="",
+    def test_category_uses_database_attribute_filter(self):
+        other = Product.objects.create(
+            category=self.category,
+            name="Соус",
+            slug="sauce",
             price=Decimal("200.00"),
         )
 
         response = self.client.get(
-            reverse("catalog:category", args=[self.category.slug])
+            reverse("catalog:category", args=[self.category.slug]),
+            {"attribute": self.stew.pk},
         )
 
         self.assertContains(response, self.product.name)
-        self.assertNotContains(response, "Скумбрия")
+        self.assertNotContains(response, other.name)
+        self.assertContains(response, "Вид продукции: Тушёнка")
 
-    def test_search_filters_products_by_name(self):
-        Product.objects.create(
-            category=self.category,
-            name="Паштет",
-            slug="pashtet",
-            description="",
-            price=Decimal("250.00"),
-        )
+    def test_catalog_exposes_active_attribute_groups(self):
+        response = self.client.get(reverse("catalog:index"))
 
-        response = self.client.get(
-            reverse("catalog:index"),
-            {"q": "говяжья"},
-        )
+        self.assertContains(response, "Вид продукции")
+        self.assertContains(response, "Тушёнка")
+        self.assertEqual(response.context["filter_groups"][0].slug, "product-type")
 
-        self.assertContains(response, self.product.name)
-        self.assertNotContains(response, "Паштет")
-        self.assertEqual(response.context["search_query"], "говяжья")
-
-    def test_search_matches_description_and_category(self):
-        description_response = self.client.get(
-            reverse("catalog:index"),
-            {"q": "говядины"},
-        )
-        category_response = self.client.get(
-            reverse("catalog:index"),
-            {"q": "тушёнка"},
-        )
-
-        self.assertContains(description_response, self.product.name)
-        self.assertContains(category_response, self.product.name)
-
-    def test_search_shows_empty_message(self):
-        response = self.client.get(
-            reverse("catalog:index"),
-            {"q": "ананас"},
-        )
-
-        self.assertContains(
-            response,
-            "По запросу «ананас» ничего не найдено.",
-        )
-
-    def test_parent_category_page_lists_child_products(self):
-        parent = Category.objects.create(
-            name="Консервы",
-            slug="konservy",
-        )
-        self.category.parent = parent
-        self.category.save(update_fields=("parent",))
-
-        response = self.client.get(reverse("catalog:category", args=[parent.slug]))
-
-        self.assertContains(response, self.product.name)
-
-    def test_product_detail_uses_category_and_product_slugs(self):
-        response = self.client.get(
+    def test_search_and_unicode_detail_url(self):
+        search_response = self.client.get(reverse("catalog:index"), {"q": "говяж"})
+        detail_response = self.client.get(
             reverse(
                 "catalog:product_detail",
                 args=[self.category.slug, self.product.slug],
             )
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "catalog/product_detail.html")
-        self.assertContains(response, self.product.name)
-
-    def test_unicode_slugs_are_supported(self):
-        category = Category.objects.create(
-            name="Консервы",
-            slug="консервы",
-        )
-        product = Product.objects.create(
-            category=category,
-            name="Говядина",
-            slug="говядина",
-            description="",
-            price=Decimal("480.00"),
-        )
-
-        category_response = self.client.get(
-            reverse("catalog:category", args=[category.slug])
-        )
-        product_response = self.client.get(
-            reverse(
-                "catalog:product_detail",
-                args=[category.slug, product.slug],
-            )
-        )
-
-        self.assertEqual(category_response.status_code, 200)
-        self.assertContains(category_response, product.name)
-        self.assertEqual(product_response.status_code, 200)
+        self.assertContains(search_response, self.product.name)
+        self.assertEqual(detail_response.status_code, 200)
 
     def test_inactive_product_is_not_public(self):
         self.product.is_active = False
@@ -396,79 +436,79 @@ class CatalogViewTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class LegacyCatalogImportTests(TestCase):
-    @patch(
-        "apps.catalog.management.commands.import_legacy_catalog."
-        "Command._read_legacy_data"
-    )
-    def test_imports_legacy_catalog(self, read_legacy_data):
-        read_legacy_data.return_value = (
-            [
-                {
-                    "id": 1,
-                    "name": "🍖🥫 Мясные консервы",
-                    "description": "Мясные консервы",
-                    "is_active": True,
-                },
-            ],
-            [
-                {
-                    "id": 10,
+class CatalogSnapshotImportTests(TestCase):
+    def test_imports_current_catalog_shape_and_is_repeatable(self):
+        payload = [
+            {
+                "model": "catalog.product",
+                "pk": 65,
+                "fields": {
                     "name": "Говядина",
-                    "description": "Тушёная говядина",
-                    "price": 480.0,
-                    "type_product": "meat",
-                    "image_url": "",
-                    "stock": 12,
-                    "category_id": 1,
+                    "slug": "говядина",
+                    "description": "Описание",
+                    "price": "480.00",
+                    "old_price": None,
+                    "weight_grams": 338,
+                    "image": "products/говядина-1.jpg",
+                    "stock_quantity": 12,
+                    "storage_type": "canned",
+                    "product_type": "stew",
+                    "meat_type": "beef",
                     "is_active": True,
+                    "created_at": "2026-01-01T10:00:00Z",
+                    "updated_at": "2026-01-02T10:00:00Z",
                 },
-            ],
-        )
+            },
+            {
+                "model": "catalog.product",
+                "pk": 66,
+                "fields": {
+                    "name": "Ваш иммунитет",
+                    "slug": "ваш-иммунитет",
+                    "description": "",
+                    "price": "300.00",
+                    "old_price": None,
+                    "weight_grams": None,
+                    "image": "",
+                    "stock_quantity": 2,
+                    "storage_type": "other",
+                    "product_type": "other",
+                    "meat_type": "none",
+                    "is_active": True,
+                    "created_at": "2026-01-01T10:00:00Z",
+                    "updated_at": "2026-01-02T10:00:00Z",
+                },
+            },
+        ]
+        with TemporaryDirectory() as directory:
+            snapshot = Path(directory, "catalog.json")
+            report = Path(directory, "report.md")
+            snapshot.write_text(
+                json.dumps(payload, ensure_ascii=False),
+                encoding="utf-8",
+            )
 
-        call_command("import_legacy_catalog", skip_images=True)
+            call_command("import_catalog_snapshot", snapshot, report=report)
+            call_command("import_catalog_snapshot", snapshot, report=report)
 
-        product = Product.objects.get()
-        self.assertEqual(product.category.name, "Тушёнка")
-        self.assertEqual(product.category.parent.name, "Консервы")
+            self.assertIn("Ваш иммунитет", report.read_text(encoding="utf-8"))
+
+        product = Product.objects.get(pk=65)
+        self.assertEqual(Product.objects.count(), 2)
+        self.assertEqual(Category.objects.count(), 3)
+        self.assertEqual(product.category.name, "Консервы")
         self.assertEqual(product.price, Decimal("480.00"))
         self.assertEqual(product.stock_quantity, 12)
-        self.assertEqual(product.stock_status, Product.StockStatus.IN_STOCK)
-        self.assertEqual(product.storage_type, Product.StorageType.CANNED)
-        self.assertEqual(product.product_type, Product.ProductType.STEW)
-        self.assertEqual(product.meat_type, Product.MeatType.BEEF)
-
-    @patch(
-        "apps.catalog.management.commands.import_legacy_catalog."
-        "Command._read_legacy_data"
-    )
-    def test_import_is_repeatable(self, read_legacy_data):
-        read_legacy_data.return_value = (
-            [
-                {
-                    "id": 9,
-                    "name": "Другое",
-                    "description": "",
-                    "is_active": True,
-                },
-            ],
-            [
-                {
-                    "id": 64,
-                    "name": "Соус",
-                    "description": "",
-                    "price": 200.0,
-                    "type_product": None,
-                    "image_url": "",
-                    "stock": 0,
-                    "category_id": 9,
-                    "is_active": True,
-                },
-            ],
+        self.assertEqual(product.image.name, "products/говядина-1.jpg")
+        self.assertTrue(
+            product.attribute_values.filter(
+                attribute__slug="main-ingredient",
+                slug="beef",
+            ).exists()
         )
-
-        call_command("import_legacy_catalog", skip_images=True)
-        call_command("import_legacy_catalog", skip_images=True)
-
-        self.assertEqual(Category.objects.count(), 1)
-        self.assertEqual(Product.objects.count(), 1)
+        self.assertFalse(
+            Product.objects.get(pk=66).attribute_values.filter(
+                attribute__slug="features",
+                slug="meat-free",
+            ).exists()
+        )

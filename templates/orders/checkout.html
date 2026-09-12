@@ -1,70 +1,65 @@
 {% extends "base.html" %}
 
-{% block title %}Оформление заказа — Asotia Food Shop{% endblock %}
+{% block title %}Оформление заказа — Asotia{% endblock %}
+{% block body_class %}checkout-page-view{% endblock %}
 
 {% block content %}
-    <section class="checkout-page">
-        <div class="checkout-header">
-            <a href="{% url 'cart:detail' %}">← Вернуться в корзину</a>
+<section class="checkout-page">
+    <header class="page-heading checkout-heading">
+        <div>
+            <a class="back-link" href="{% url 'cart:detail' %}">← Вернуться в корзину</a>
+            <p class="section-kicker">Последний шаг</p>
             <h1>Оформление заказа</h1>
-            <p>Регистрация не требуется.</p>
         </div>
+        <p>Без регистрации · займёт около минуты</p>
+    </header>
 
-        <form method="post" class="checkout-layout">
-            {% csrf_token %}
+    <form method="post" class="checkout-layout">
+        {% csrf_token %}
+        <div class="checkout-form-card">
+            <div class="card-heading">
+                <span>01</span>
+                <div><h2>Контактные данные</h2><p>Используем только для этого заказа.</p></div>
+            </div>
 
-            <div class="checkout-form-card">
-                <h2>Контактные данные</h2>
+            {% if form.non_field_errors %}
+                <div class="checkout-form-errors" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
 
-                {% if form.non_field_errors %}
-                    <div class="checkout-form-errors" role="alert">
-                        {{ form.non_field_errors }}
-                    </div>
-                {% endif %}
-
+            <div class="checkout-fields">
                 {% for field in form %}
-                    <div class="checkout-field{% if field.errors %} checkout-field-error{% endif %}">
+                    <div class="checkout-field{% if field.errors %} checkout-field-error{% endif %}{% if field.name == 'comment' %} field-wide{% endif %}">
                         <label for="{{ field.id_for_label }}">
-                            {{ field.label }}
-                            {% if not field.field.required %}
-                                <span>необязательно</span>
-                            {% endif %}
+                            {{ field.label }}{% if field.field.required %}<b>*</b>{% else %}<span>необязательно</span>{% endif %}
                         </label>
                         {{ field }}
-                        {% if field.help_text %}
-                            <div class="auth-help">{{ field.help_text }}</div>
-                        {% endif %}
-                        {% if field.errors %}
-                            <div class="checkout-error" role="alert">
-                                {{ field.errors }}
-                            </div>
-                        {% endif %}
+                        {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
+                        {% if field.errors %}<div class="checkout-error" role="alert">{{ field.errors }}</div>{% endif %}
                     </div>
                 {% endfor %}
             </div>
+        </div>
 
-            <aside class="checkout-summary">
-                <h2>Ваш заказ</h2>
-                <div class="checkout-order-items">
-                    {% for item in cart_items %}
-                        <div class="checkout-order-item">
-                            <span>{{ item.product.name }} × {{ item.quantity }}</span>
-                            <strong>{{ item.total_price }} ₽</strong>
-                        </div>
-                    {% endfor %}
-                </div>
-                <div class="checkout-total">
-                    <span>Итого</span>
-                    <strong>{{ cart_total }} ₽</strong>
-                </div>
-                <button type="submit">Подтвердить заказ</button>
-                <p>
-                    Нажимая кнопку, вы соглашаетесь с
-                    <a href="{% url 'pages:terms' %}">условиями покупки</a>
-                    и
-                    <a href="{% url 'pages:privacy' %}">политикой конфиденциальности</a>.
-                </p>
-            </aside>
-        </form>
-    </section>
+        <aside class="checkout-summary">
+            <div class="card-heading">
+                <span>02</span>
+                <div><h2>Ваш заказ</h2><p>{{ cart|length }} шт. в корзине</p></div>
+            </div>
+            <div class="checkout-order-items">
+                {% for item in cart_items %}
+                    <div class="checkout-order-item">
+                        <span>{{ item.product.name }} <small>× {{ item.quantity }}</small></span>
+                        <strong>{{ item.total_price }} ₽</strong>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="checkout-total"><span>Итого</span><strong>{{ cart_total }} ₽</strong></div>
+            <button type="submit">Оформить заказ <span>→</span></button>
+            <p class="checkout-legal">
+                Нажимая кнопку, вы принимаете <a href="{% url 'pages:terms' %}">условия покупки</a>
+                и <a href="{% url 'pages:privacy' %}">политику конфиденциальности</a>.
+            </p>
+        </aside>
+    </form>
+</section>
 {% endblock %}

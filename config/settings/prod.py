@@ -1,10 +1,9 @@
 from .base import *  # noqa: F403
-from .base import env
 
 
 DEBUG = False
 
-ALLOWED_HOSTS = env.list(
+ALLOWED_HOSTS = env.list(  # noqa: F405
     "ALLOWED_HOSTS",
     default=[
         "asotia.ru",
@@ -12,7 +11,7 @@ ALLOWED_HOSTS = env.list(
     ],
 )
 
-CSRF_TRUSTED_ORIGINS = env.list(
+CSRF_TRUSTED_ORIGINS = env.list(  # noqa: F405
     "CSRF_TRUSTED_ORIGINS",
     default=[
         "https://asotia.ru",
@@ -22,7 +21,7 @@ CSRF_TRUSTED_ORIGINS = env.list(
 
 
 DATABASES = {
-    "default": env.db("DATABASE_URL"),
+    "default": env.db("DATABASE_URL"),  # noqa: F405
 }
 
 

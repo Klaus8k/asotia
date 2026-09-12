@@ -1,0 +1,103 @@
+<section class="catalog-shell">
+    <header class="catalog-intro">
+        <p class="section-kicker">Витрина Asotia</p>
+        <div>
+            <h1>
+                {% if search_query %}
+                    Поиск: «{{ search_query }}»
+                {% elif current_category %}
+                    {{ current_category.name }}
+                {% else %}
+                    Каталог продуктов
+                {% endif %}
+            </h1>
+            <p>
+                {% if current_category and current_category.description %}
+                    {{ current_category.description }}
+                {% else %}
+                    Выбирайте по категории, составу и основному ингредиенту.
+                {% endif %}
+            </p>
+        </div>
+    </header>
+
+    <nav class="catalog-categories" aria-label="Категории каталога">
+        <a href="{% url 'catalog:index' %}"{% if not current_category %} class="is-active"{% endif %}>Все</a>
+        {% for category in categories %}
+            <a href="{% url 'catalog:category' category.slug %}"{% if current_category.pk == category.pk %} class="is-active"{% endif %}>
+                {{ category.name }}
+            </a>
+        {% endfor %}
+    </nav>
+
+    {% if selected_chips %}
+        <div class="active-filters" aria-label="Активные фильтры">
+            {% for chip in selected_chips %}
+                <a href="{{ chip.remove_url }}">{{ chip.label }} <span aria-hidden="true">×</span></a>
+            {% endfor %}
+            <a class="clear-filters" href="{{ clear_filters_url }}">Сбросить всё</a>
+        </div>
+    {% endif %}
+
+    <div class="catalog-layout">
+        <details class="catalog-filter-shell" open>
+            <summary>
+                <span>
+                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+                    Фильтры
+                    {% if selected_chips %}<b>{{ selected_chips|length }}</b>{% endif %}
+                </span>
+                <span aria-hidden="true">＋</span>
+            </summary>
+            <form method="get" class="catalog-filter-form">
+                {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+                {% for group in filter_groups %}
+                    <fieldset>
+                        <legend>{{ group.name }}</legend>
+                        <div class="filter-options">
+                            {% for value in group.public_values %}
+                                <label>
+                                    <input type="checkbox" name="attribute" value="{{ value.pk }}"{% if value.is_selected %} checked{% endif %}>
+                                    <span>{{ value.name }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                {% empty %}
+                    <p class="filter-empty">Для этой выдачи фильтров пока нет.</p>
+                {% endfor %}
+                <label class="filter-sort">
+                    <span>Сортировка</span>
+                    <select name="sort">
+                        {% for value, label in sort_options %}
+                            <option value="{{ value }}"{% if current_sort == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <button type="submit">Показать товары</button>
+            </form>
+        </details>
+
+        <div class="catalog-results">
+            <div class="catalog-results-header">
+                <p><b>{{ products|length }}</b> товаров</p>
+                <span>Актуальное наличие</span>
+            </div>
+
+            {% if products %}
+                <div class="product-grid catalog-product-grid">
+                    {% for product in products %}
+                        {% include "catalog/_product_card.html" %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="catalog-empty">
+                    <span aria-hidden="true">◎</span>
+                    <h2>Ничего не нашли</h2>
+                    <p>Попробуйте убрать часть фильтров или изменить запрос.</p>
+                    <a href="{% url 'catalog:index' %}">Вернуться ко всем товарам</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>

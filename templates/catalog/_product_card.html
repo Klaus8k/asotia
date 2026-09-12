@@ -3,15 +3,16 @@
         href="{% url 'catalog:product_detail' product.category.slug product.slug %}"
         class="product-image"
     >
+        <span class="product-badges">
+            {% if product.is_new %}<b>Новинка</b>{% endif %}
+            {% if product.old_price %}<b class="sale-badge">Выгодно</b>{% endif %}
+        </span>
         {% if product.image %}
-            <img src="{{ product.image.url }}" alt="{{ product.name }}">
+            <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
         {% else %}
             <span class="product-placeholder" aria-label="Изображение скоро появится">
                 <svg aria-hidden="true" viewBox="0 0 64 64">
-                    <path d="M15 17h34v33H15z"/>
-                    <path d="M13 17c0-4 38-4 38 0s-38 4-38 0Z"/>
-                    <path d="M15 45c3 4 31 4 34 0"/>
-                    <path d="M24 28h16M24 34h16"/>
+                    <path d="M15 17h34v33H15z"/><path d="M13 17c0-4 38-4 38 0s-38 4-38 0Z"/><path d="M15 45c3 4 31 4 34 0"/>
                 </svg>
                 <small>Фото скоро</small>
             </span>
@@ -19,95 +20,62 @@
     </a>
 
     <div class="product-info">
+        <p class="product-overline">
+            {{ product.category.name }}
+            {% if product.stock_quantity > 0 %}<span>В наличии</span>{% endif %}
+        </p>
         <h3>
             <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">
                 {{ product.name }}
             </a>
         </h3>
-
         <p class="product-meta">
-            {{ product.category.name }}
-            {% if product.weight_grams %} · {{ product.weight_grams }} г{% endif %}
+            {% if product.weight_grams %}
+                {{ product.weight_grams }} г
+            {% elif product.volume_ml %}
+                {{ product.volume_ml }} мл
+            {% elif product.units_count %}
+                {{ product.units_count }} шт.
+            {% else %}
+                {% for value in product.public_attribute_values|slice:":1" %}{{ value.name }}{% empty %}Продукт Asotia{% endfor %}
+            {% endif %}
         </p>
 
         <div class="product-bottom">
-            <strong>{{ product.price }} ₽</strong>
+            <span class="product-price">
+                <strong>{{ product.price }} ₽</strong>
+                {% if product.old_price %}<del>{{ product.old_price }} ₽</del>{% endif %}
+            </span>
 
             {% if product.stock_quantity > 0 %}
                 {% if product.cart_quantity %}
-                    <div
-                        class="product-card-stepper"
-                        aria-label="Количество товара {{ product.name }}"
-                    >
+                    <div class="product-stepper" aria-label="Количество товара {{ product.name }}">
                         <form action="{% url 'cart:update' product.pk %}" method="post">
                             {% csrf_token %}
-                            <input
-                                type="hidden"
-                                name="quantity"
-                                value="{{ product.cart_quantity|add:'-1' }}"
-                            >
-                            <input
-                                type="hidden"
-                                name="next"
-                                value="{{ request.get_full_path }}"
-                            >
-                            <button
-                                type="submit"
-                                aria-label="Уменьшить количество товара {{ product.name }}"
-                            >
-                                −
-                            </button>
+                            <input type="hidden" name="quantity" value="{{ product.cart_quantity|add:'-1' }}">
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" aria-label="Уменьшить количество">−</button>
                         </form>
                         <span>{{ product.cart_quantity }}</span>
                         <form action="{% url 'cart:add' product.pk %}" method="post">
                             {% csrf_token %}
                             <input type="hidden" name="quantity" value="1">
-                            <input
-                                type="hidden"
-                                name="next"
-                                value="{{ request.get_full_path }}"
-                            >
-                            <button
-                                type="submit"
-                                aria-label="Увеличить количество товара {{ product.name }}"
-                                {% if product.cart_quantity >= product.stock_quantity %}disabled{% endif %}
-                            >
-                                +
-                            </button>
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" aria-label="Увеличить количество" {% if product.cart_quantity >= product.stock_quantity %}disabled{% endif %}>+</button>
                         </form>
                     </div>
                 {% else %}
-                    <form
-                        action="{% url 'cart:add' product.pk %}"
-                        method="post"
-                        class="add-to-cart-form"
-                    >
+                    <form action="{% url 'cart:add' product.pk %}" method="post" class="add-to-cart-form">
                         {% csrf_token %}
                         <input type="hidden" name="quantity" value="1">
-                        <input
-                            type="hidden"
-                            name="next"
-                            value="{{ request.get_full_path }}"
-                        >
-                        <button
-                            type="submit"
-                            aria-label="Добавить «{{ product.name }}» в корзину"
-                        >
-                            <svg aria-hidden="true" viewBox="0 0 24 24">
-                                <path d="M12 5v14M5 12h14"/>
-                            </svg>
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" aria-label="Добавить «{{ product.name }}» в корзину">
+                            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                         </button>
                     </form>
                 {% endif %}
             {% else %}
-                <button
-                    type="button"
-                    class="add-to-cart-disabled"
-                    aria-label="Товар закончился"
-                    disabled
-                >
-                    ×
-                </button>
+                <button type="button" class="add-to-cart-disabled" disabled aria-label="Нет в наличии">×</button>
             {% endif %}
         </div>
     </div>
